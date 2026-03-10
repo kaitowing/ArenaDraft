@@ -79,6 +79,12 @@ export async function joinTournamentByCode(
   )
   const snapshot = await getDocs(q)
   if (snapshot.empty) throw new Error('Torneio não encontrado ou já iniciado.')
+  
+  const tournamentData = snapshot.docs[0].data() as Tournament
+  if (tournamentData.participants.includes(uid)) {
+    throw new Error('Você já está participando deste torneio.')
+  }
+  
   const tournamentRef = snapshot.docs[0].ref
   await updateDoc(tournamentRef, {
     participants: arrayUnion(uid),
