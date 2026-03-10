@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Globe, MapPin, Plus } from 'lucide-react'
+import { Globe, MapPin, Plus, Search } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
-import { useRankingRealtime, GLOBAL_CITY } from '#/features/ranking/rankingQueries'
+import { useRankingRealtime, useRankingSearchFallback, GLOBAL_CITY } from '#/features/ranking/rankingQueries'
 import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
 import { RankingTable } from '#/features/ranking/RankingTable'
 import { useAuth } from '#/features/auth/useAuth'
+import { Input } from '#/components/ui/input'
+import { Button } from '#/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: Dashboard })
 
@@ -20,6 +22,8 @@ function Dashboard() {
 function DashboardContent() {
   const { user } = useAuth()
   const [selectedCity, setSelectedCity] = useState<string>(GLOBAL_CITY)
+  const [searchInput, setSearchInput] = useState('')
+  const [submittedSearchTerm, setSubmittedSearchTerm] = useState('')
 
   const { data: appUser } = useAppUserRealtime(user?.uid)
   const { data: cities = [] } = useCities()
@@ -31,6 +35,22 @@ function DashboardContent() {
     selectedCity === GLOBAL_CITY
       ? 'Global'
       : (cities.find((c) => c.id === selectedCity)?.name ?? selectedCity)
+  const normalizedSearchTerm = submittedSearchTerm.trim().toLocaleLowerCase('pt-BR')
+  const filteredPlayers = normalizedSearchTerm.length === 0
+    ? players
+    : players.filter((player) => player.displayName.toLocaleLowerCase('pt-BR').includes(normalizedSearchTerm))
+  const shouldUseFallback = normalizedSearchTerm.length > 0 && filteredPlayers.length === 0
+  const { data: fallbackPlayers = [], isLoading: isFallbackLoading } = useRankingSearchFallback(
+    submittedSearchTerm,
+    shouldUseFallback,
+  )
+  const displayedPlayers = shouldUseFallback ? fallbackPlayers : filteredPlayers
+  const rankingSource = shouldUseFallback ? fallbackPlayers : players
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmittedSearchTerm(searchInput.trim())
+  }
 
   return (
     <main className="mx-auto max-w-lg px-4 pb-28 pt-6">
@@ -41,7 +61,9 @@ function DashboardContent() {
               Ranking {selectedCity === GLOBAL_CITY ? 'Global' : selectedCityName}
             </h1>
             <p className="text-sm text-[var(--sea-ink-soft)]">
-              {players.length} jogador{players.length !== 1 ? 'es' : ''}
+              {normalizedSearchTerm.length > 0
+                ? `${displayedPlayers.length} de ${rankingSource.length} jogador${rankingSource.length !== 1 ? 'es' : ''}`
+                : `${players.length} jogador${players.length !== 1 ? 'es' : ''}`}
             </p>
           </div>
 
@@ -64,10 +86,33 @@ function DashboardContent() {
             </div>
           )}
         </div>
+
+        <form onSubmit={handleSearchSubmit} className="mt-4 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sea-ink-soft)]" />
+            <Input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar usuário por nome"
+              className="pl-9"
+            />
+          </div>
+          <Button type="submit" className="rounded-xl">
+            Buscar
+          </Button>
+        </form>
       </div>
 
       <div className="rise-in" style={{ animationDelay: '80ms' }}>
-        <RankingTable players={players} currentUserId={user?.uid} isLoading={isLoading} />
+        <RankingTable
+          players={displayedPlayers}
+          allPlayers={rankingSource}
+          currentUserId={user?.uid}
+          isLoading={isLoading || isFallbackLoading}
+          searchTerm={submittedSearchTerm}
+          totalPlayers={rankingSource.length}
+        />
       </div>
 
       <Link to="/tournaments/new">

@@ -110,3 +110,23 @@ export function useRankingRealtime(cityId: string = GLOBAL_CITY) {
 
   return result
 }
+
+export function useRankingSearchFallback(searchTerm: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['ranking-search-fallback', searchTerm],
+    queryFn: async () => {
+      const trimmedTerm = searchTerm.trim()
+      if (!trimmedTerm) return []
+
+      const snapshot = await getDocs(query(collection(db, 'users')))
+      const normalizedSearchTerm = trimmedTerm.toLocaleLowerCase('pt-BR')
+
+      return snapshot.docs
+        .map((d) => d.data() as AppUser)
+        .filter((player) => player.displayName.toLocaleLowerCase('pt-BR').includes(normalizedSearchTerm))
+        .sort((a, b) => b.mmr - a.mmr)
+    },
+    enabled,
+    staleTime: 1000 * 30,
+  })
+}

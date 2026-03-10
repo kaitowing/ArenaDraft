@@ -8,11 +8,34 @@ import {
   onSnapshot,
   orderBy,
   query,
+  Timestamp,
   where,
 } from 'firebase/firestore'
 import { useEffect, useRef } from 'react'
 import { db } from '#/lib/firebase'
 import type { AppUser, City, Tournament } from '#/types'
+
+ export type TournamentDateFilter = 'last30days' | 'thisMonth' | 'thisYear' | 'all'
+
+ function getTournamentDateThreshold(dateFilter: TournamentDateFilter) {
+   const now = new Date()
+
+   if (dateFilter === 'last30days') {
+     const date = new Date(now)
+     date.setDate(date.getDate() - 30)
+     return Timestamp.fromDate(date)
+   }
+
+   if (dateFilter === 'thisMonth') {
+     return Timestamp.fromDate(new Date(now.getFullYear(), now.getMonth(), 1))
+   }
+
+   if (dateFilter === 'thisYear') {
+     return Timestamp.fromDate(new Date(now.getFullYear(), 0, 1))
+   }
+
+   return null
+ }
 
 export function useTournaments() {
   return useQuery({
@@ -147,16 +170,35 @@ export function useCities() {
   })
 }
 
-export function useTournamentsRealtime() {
+export function useTournamentsRealtime({
+  dateFilter = 'last30days',
+  visibleCount = 10,
+}: {
+  dateFilter?: TournamentDateFilter
+  visibleCount?: number
+} = {}) {
   const queryClient = useQueryClient()
   const initializedRef = useRef(false)
+  const queryLimit = visibleCount + 1
+  const threshold = getTournamentDateThreshold(dateFilter)
 
   const result = useQuery({
-    queryKey: ['tournaments-realtime'],
+    queryKey: ['tournaments-realtime', dateFilter, visibleCount],
     queryFn: async () => {
-      const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'))
+      const q = threshold
+        ? query(
+            collection(db, 'tournaments'),
+            where('createdAt', '>=', threshold),
+            orderBy('createdAt', 'desc'),
+            limit(queryLimit),
+          )
+        : query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'), limit(queryLimit))
       const snapshot = await getDocs(q)
-      return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tournament)
+      const tournaments = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tournament)
+      return {
+        tournaments: tournaments.slice(0, visibleCount),
+        hasMore: tournaments.length > visibleCount,
+      }
     },
     staleTime: Infinity,
     gcTime: 1000 * 60 * 5,
@@ -165,21 +207,31 @@ export function useTournamentsRealtime() {
   })
 
   useEffect(() => {
-    const q = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'))
+    const q = threshold
+      ? query(
+          collection(db, 'tournaments'),
+          where('createdAt', '>=', threshold),
+          orderBy('createdAt', 'desc'),
+          limit(queryLimit),
+        )
+      : query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'), limit(queryLimit))
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!initializedRef.current) {
         initializedRef.current = true
         return
       }
-      const tournamentList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tournament)
-      queryClient.setQueryData(['tournaments-realtime'], tournamentList)
+      const tournaments = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tournament)
+      queryClient.setQueryData(['tournaments-realtime', dateFilter, visibleCount], {
+        tournaments: tournaments.slice(0, visibleCount),
+        hasMore: tournaments.length > visibleCount,
+      })
     })
 
     return () => {
       unsubscribe()
       initializedRef.current = false
     }
-  }, [queryClient])
+  }, [dateFilter, queryClient, queryLimit, threshold, visibleCount])
 
   return result
 }

@@ -8,8 +8,11 @@ const MAX_VISIBLE = 20
 
 interface RankingTableProps {
   players: AppUser[]
+  allPlayers?: AppUser[]
   currentUserId?: string
   isLoading?: boolean
+  searchTerm?: string
+  totalPlayers?: number
 }
 
 function getInitials(name: string) {
@@ -88,7 +91,7 @@ function PlayerRow({ player, index, isCurrentUser = false }: { player: AppUser; 
   )
 }
 
-export function RankingTable({ players, currentUserId, isLoading }: RankingTableProps) {
+export function RankingTable({ players, allPlayers, currentUserId, isLoading, searchTerm = '', totalPlayers }: RankingTableProps) {
   if (isLoading) {
     return (
       <div className="surf-card texture-noise rounded-3xl p-5">
@@ -116,14 +119,16 @@ export function RankingTable({ players, currentUserId, isLoading }: RankingTable
     )
   }
 
-  const top20 = players.slice(0, MAX_VISIBLE)
-  const currentUserIndex = currentUserId ? players.findIndex((p) => p.uid === currentUserId) : -1
-  const currentUserOutside = currentUserIndex >= MAX_VISIBLE
-  const currentUser = currentUserIndex >= 0 ? players[currentUserIndex] : null
+  const trimmedSearchTerm = searchTerm.trim()
+  const isSearching = trimmedSearchTerm.length > 0
+  const rankingSource = allPlayers ?? players
+  const visiblePlayers = isSearching ? players : players.slice(0, MAX_VISIBLE)
+  const currentUserIndex = currentUserId ? rankingSource.findIndex((p) => p.uid === currentUserId) : -1
+  const currentUserOutside = !isSearching && currentUserIndex >= MAX_VISIBLE
+  const currentUser = currentUserIndex >= 0 ? rankingSource[currentUserIndex] : null
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Current user card (shown separately when outside top 20) */}
       {currentUserOutside && currentUser && (
         <div className="surf-card texture-noise rounded-3xl p-4 no-hover">
           <div className="flex items-center gap-2 mb-2">
@@ -141,29 +146,37 @@ export function RankingTable({ players, currentUserId, isLoading }: RankingTable
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="sport-label text-xs text-[var(--text-muted)]">Ranking geral</p>
-            <h3 className="text-xl font-bold text-[var(--text-heading)]">Top {Math.min(MAX_VISIBLE, players.length)}</h3>
+            <h3 className="text-xl font-bold text-[var(--text-heading)]">
+              {isSearching ? `${players.length} resultado${players.length !== 1 ? 's' : ''}` : `Top ${Math.min(MAX_VISIBLE, players.length)}`}
+            </h3>
           </div>
           <div className="flex items-center gap-1 rounded-full bg-[var(--shell)] px-3 py-1 text-xs font-semibold text-[var(--cta-primary)]">
             <Waves className="size-3.5" />
-            {players.length} jogadores
+            {totalPlayers ?? players.length} jogadores
           </div>
         </div>
 
         {players.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-[var(--text-muted)]">
             <Trophy className="size-10 opacity-40" />
-            <p className="text-sm">Nenhum jogador cadastrado ainda.</p>
+            <p className="text-sm">
+              {isSearching ? 'Nenhum usuário encontrado para essa busca.' : 'Nenhum jogador cadastrado ainda.'}
+            </p>
           </div>
         ) : (
           <ul className="mt-4 divide-y divide-[var(--wave-line)]">
-            {top20.map((player, index) => (
-              <PlayerRow
-                key={player.uid}
-                player={player}
-                index={index}
-                isCurrentUser={player.uid === currentUserId}
-              />
-            ))}
+            {visiblePlayers.map((player) => {
+              const playerIndex = rankingSource.findIndex((entry) => entry.uid === player.uid)
+
+              return (
+                <PlayerRow
+                  key={player.uid}
+                  player={player}
+                  index={playerIndex >= 0 ? playerIndex : 0}
+                  isCurrentUser={player.uid === currentUserId}
+                />
+              )
+            })}
           </ul>
         )}
       </div>

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Loader2, LogIn, Plus, Trophy, RefreshCw } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { TournamentCard } from '#/features/tournaments/TournamentCard'
-import { useTournamentsRealtime } from '#/features/tournaments/tournamentQueries'
+import { useTournamentsRealtime, type TournamentDateFilter } from '#/features/tournaments/tournamentQueries'
 import { joinTournamentByCode } from '#/features/tournaments/tournamentService'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -11,6 +11,15 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
+
+ const PAGE_SIZE = 10
+
+ const DATE_FILTER_OPTIONS: Array<{ value: TournamentDateFilter; label: string }> = [
+   { value: 'last30days', label: 'Últimos 30 dias' },
+   { value: 'thisMonth', label: 'Este mês' },
+   { value: 'thisYear', label: 'Este ano' },
+   { value: 'all', label: 'Todo o histórico' },
+ ]
 
 export const Route = createFileRoute('/tournaments/')({ component: TournamentsPage })
 
@@ -27,10 +36,19 @@ function TournamentsContent() {
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const { data: tournaments = [], isLoading } = useTournamentsRealtime()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  const [dateFilter, setDateFilter] = useState<TournamentDateFilter>('last30days')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const { data, isLoading } = useTournamentsRealtime({ dateFilter, visibleCount })
+  const tournaments = data?.tournaments ?? []
+  const hasMore = data?.hasMore ?? false
+
+  function handleDateFilterChange(nextFilter: TournamentDateFilter) {
+    setDateFilter(nextFilter)
+    setVisibleCount(PAGE_SIZE)
+  }
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault()
@@ -93,6 +111,13 @@ function TournamentsContent() {
           <div>
             <p className="sport-label text-xs text-[var(--text-muted)]">Histórico de campeonatos</p>
             <h1 className="display-title text-3xl font-bold text-[var(--text-heading)]">Torneios</h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {isLoading
+                ? 'Carregando torneios...'
+                : hasMore
+                  ? `Exibindo ${tournaments.length} torneios deste filtro.`
+                  : `${tournaments.length} torneio${tournaments.length !== 1 ? 's' : ''} neste filtro.`}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -113,6 +138,23 @@ function TournamentsContent() {
             </Link>
           </div>
         </div>
+
+        <div className="mb-4 rise-in" style={{ animationDelay: '40ms' }}>
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            Período
+          </label>
+          <div className="relative">
+            <select
+              value={dateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value as TournamentDateFilter)}
+              className="w-full appearance-none rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-sm font-medium text-[var(--sea-ink)] focus:outline-none"
+            >
+              {DATE_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Scrollable tournaments list */}
@@ -126,16 +168,28 @@ function TournamentsContent() {
         ) : tournaments.length === 0 ? (
           <div className="surf-card texture-noise flex flex-col items-center gap-3 rounded-3xl px-6 py-16 text-center text-[var(--text-muted)]">
             <Trophy className="size-12 text-[var(--cta-primary)]" />
-            <p className="text-sm">Nenhum torneio ainda.</p>
+            <p className="text-sm">Nenhum torneio encontrado para o período selecionado.</p>
             <Link to="/tournaments/new" className="text-sm font-semibold text-[var(--cta-primary)] underline underline-offset-4">
               Criar primeiro torneio
             </Link>
           </div>
         ) : (
-          <div className="space-y-3 rise-in" style={{ animationDelay: '80ms' }}>
-            {tournaments.map((t) => (
-              <TournamentCard key={t.id} tournament={t} />
-            ))}
+          <div className="space-y-4 rise-in" style={{ animationDelay: '80ms' }}>
+            <div className="space-y-3">
+              {tournaments.map((t) => (
+                <TournamentCard key={t.id} tournament={t} />
+              ))}
+            </div>
+            {hasMore && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-2xl"
+                onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+              >
+                Carregar mais torneios
+              </Button>
+            )}
           </div>
         )}
       </div>
