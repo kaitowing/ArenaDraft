@@ -10,12 +10,13 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
-import type { AppUser, Tournament, TournamentCategory, TournamentFormat } from '#/types'
+import type { AppUser, Match, MedalAward, Tournament, TournamentCategory, TournamentFormat } from '#/types'
 import { buildGroupStage, generateRoundRobin } from './algorithms'
 import { DEFAULT_TOURNAMENT_CATEGORY, DEFAULT_TOURNAMENT_FORMAT, getPairPolicy, validatePairForPolicy } from '#/lib/utils'
 
@@ -152,7 +153,149 @@ export async function updateTournamentStatus(
   })
 }
 
+function sortPlayerIds(ids: [string, string]): [string, string] {
+  return [...ids].sort() as [string, string]
+}
+
+function getWinningTeamId(match: Match): string | null {
+  const scoreA = match.teamA.score
+  const scoreB = match.teamB.score
+  if (scoreA == null || scoreB == null || scoreA === scoreB) return null
+  if (!match.teamA.teamId || !match.teamB.teamId) return null
+  return scoreA > scoreB ? match.teamA.teamId : match.teamB.teamId
+}
+
+async function awardOwnerOfTheCourtMedal(tournament: Tournament): Promise<void> {
+  if (tournament.format !== 'round_robin') return
+
+  const matchesQuery = query(collection(db, 'matches'), where('tournamentId', '==', tournament.id))
+  const matchesSnapshot = await getDocs(matchesQuery)
+  const matches = matchesSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Match)
+  if (matches.length === 0) return
+
+  const finishedMatches = matches.filter((m) => m.status === 'finished')
+  if (finishedMatches.length !== matches.length) return
+
+  type TeamStats = {
+    teamId: string
+    playerIds: [string, string]
+    wins: number
+    losses: number
+    setDiff: number
+    pointDiff: number
+  }
+
+  const teamStats = new Map<string, TeamStats>()
+
+  for (const match of finishedMatches) {
+    if (!match.teamA.teamId || !match.teamB.teamId) continue
+    const scoreA = match.teamA.score ?? 0
+    const scoreB = match.teamB.score ?? 0
+    const winnerTeamId = getWinningTeamId(match)
+    if (!winnerTeamId) continue
+
+    if (!teamStats.has(match.teamA.teamId)) {
+      teamStats.set(match.teamA.teamId, {
+        teamId: match.teamA.teamId,
+        playerIds: sortPlayerIds(match.teamA.playerIds),
+        wins: 0,
+        losses: 0,
+        setDiff: 0,
+        pointDiff: 0,
+      })
+    }
+    if (!teamStats.has(match.teamB.teamId)) {
+      teamStats.set(match.teamB.teamId, {
+        teamId: match.teamB.teamId,
+        playerIds: sortPlayerIds(match.teamB.playerIds),
+        wins: 0,
+        losses: 0,
+        setDiff: 0,
+        pointDiff: 0,
+      })
+    }
+
+    const teamAStats = teamStats.get(match.teamA.teamId)!
+    const teamBStats = teamStats.get(match.teamB.teamId)!
+
+    if (winnerTeamId === match.teamA.teamId) {
+      teamAStats.wins += 1
+      teamBStats.losses += 1
+    } else {
+      teamBStats.wins += 1
+      teamAStats.losses += 1
+    }
+
+    if (match.scoringFormat === 'sets') {
+      teamAStats.setDiff += scoreA - scoreB
+      teamBStats.setDiff += scoreB - scoreA
+    } else {
+      teamAStats.pointDiff += scoreA - scoreB
+      teamBStats.pointDiff += scoreB - scoreA
+    }
+  }
+
+  const ranking = [...teamStats.values()].sort((a, b) => {
+    return (
+      b.wins - a.wins ||
+      a.losses - b.losses ||
+      b.setDiff - a.setDiff ||
+      b.pointDiff - a.pointDiff ||
+      a.teamId.localeCompare(b.teamId)
+    )
+  })
+  const champion = ranking[0]
+  if (!champion) return
+
+  const championMatches = finishedMatches.filter(
+    (m) => m.teamA.teamId === champion.teamId || m.teamB.teamId === champion.teamId,
+  )
+  if (championMatches.length === 0) return
+
+  const qualifies = championMatches.every((match) => {
+    const winnerTeamId = getWinningTeamId(match)
+    if (winnerTeamId !== champion.teamId) return false
+
+    // Confirmed rule: in points mode, winning the game counts as not losing a set.
+    if (match.scoringFormat === 'points') return true
+
+    const championIsTeamA = match.teamA.teamId === champion.teamId
+    const lostSets = championIsTeamA ? (match.teamB.score ?? 0) : (match.teamA.score ?? 0)
+    return lostSets === 0
+  })
+
+  if (!qualifies) return
+
+  const batch = writeBatch(db)
+
+  for (const uid of champion.playerIds) {
+    const dedupQuery = query(
+      collection(db, 'medals'),
+      where('uid', '==', uid),
+      where('id', '==', 'owner_of_the_court'),
+      where('tournamentId', '==', tournament.id),
+      limit(1),
+    )
+    const existing = await getDocs(dedupQuery)
+    if (!existing.empty) continue
+
+    const medalRef = doc(collection(db, 'medals'))
+    const medal: MedalAward = {
+      id: 'owner_of_the_court',
+      uid,
+      tournamentId: tournament.id,
+      awardedAt: Timestamp.now(),
+    }
+    batch.set(medalRef, medal)
+  }
+
+  await batch.commit()
+}
+
 export async function completeTournament(tournamentId: string): Promise<void> {
+  let completedNow = false
+  let tournamentToAward: Tournament | null = null
+
   await runTransaction(db, async (tx) => {
     const ref = doc(db, 'tournaments', tournamentId)
     const snap = await tx.get(ref)
@@ -160,6 +303,8 @@ export async function completeTournament(tournamentId: string): Promise<void> {
 
     const tournament = { id: snap.id, ...snap.data() } as Tournament
     if (tournament.status === 'completed') return
+    completedNow = true
+    tournamentToAward = tournament
 
     tx.update(ref, { status: 'completed' })
 
@@ -169,6 +314,10 @@ export async function completeTournament(tournamentId: string): Promise<void> {
       })
     }
   })
+
+  if (completedNow && tournamentToAward) {
+    await awardOwnerOfTheCourtMedal(tournamentToAward)
+  }
 }
 
 export async function forceCompleteTournament(tournamentId: string): Promise<void> {

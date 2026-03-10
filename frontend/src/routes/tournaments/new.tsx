@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Loader2, Trophy, Shuffle, Layers, Swords } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { createTournamentLobby } from '#/features/tournaments/tournamentService'
 import { Button } from '#/components/ui/button'
@@ -23,6 +24,7 @@ function NewTournamentContent() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
   const [isRoundTrip, setIsRoundTrip] = useState(false)
   const [tournamentName, setTournamentName] = useState('')
@@ -44,6 +46,7 @@ function NewTournamentContent() {
         groupCount,
         advancePerGroup,
       })
+      await queryClient.invalidateQueries({ queryKey: ['tournaments-realtime'] })
       void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })
     } catch (err) {
       toast({ variant: 'destructive', title: 'Erro ao criar torneio', description: String(err) })

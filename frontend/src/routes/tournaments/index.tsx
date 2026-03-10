@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Loader2, LogIn, Plus, Trophy } from 'lucide-react'
+import { Loader2, LogIn, Plus, Trophy, RefreshCw } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { TournamentCard } from '#/features/tournaments/TournamentCard'
 import { useTournamentsRealtime } from '#/features/tournaments/tournamentQueries'
@@ -30,6 +30,7 @@ function TournamentsContent() {
   const { data: tournaments = [], isLoading } = useTournamentsRealtime()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault()
@@ -54,60 +55,90 @@ function TournamentsContent() {
     }
   }
 
-  return (
-    <main className="mx-auto max-w-xl px-4 pb-28 pt-6">
-      {/* Join by code */}
-      <form onSubmit={handleJoin} className="mb-6 rounded-3xl border border-[var(--wave-line)] bg-[color-mix(in_oklab,var(--shell)_86%,transparent)] px-4 py-3 shadow-sm backdrop-blur rise-in">
-        <p className="sport-label text-[11px] text-[var(--text-muted)]">Código do torneio</p>
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Input
-            placeholder="EX: AB3X9Z"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            maxLength={6}
-            className="font-mono tracking-[0.5em] uppercase text-lg"
-          />
-          <Button type="submit" disabled={joining || code.length < 6} className="shrink-0 gap-1.5">
-            {joining ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
-            Entrar
-          </Button>
-        </div>
-      </form>
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['tournaments-realtime'] })
+      toast({ title: 'Lista atualizada!' })
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Erro ao atualizar', description: String(err) })
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
-      <div className="mb-6 flex items-center justify-between gap-3 rise-in">
-        <div>
-          <p className="sport-label text-xs text-[var(--text-muted)]">Histórico de campeonatos</p>
-          <h1 className="display-title text-3xl font-bold text-[var(--text-heading)]">Torneios</h1>
+  return (
+    <main className="mx-auto max-w-xl px-4 pb-28 pt-6 flex flex-col h-screen">
+      {/* Fixed header section */}
+      <div className="flex-shrink-0">
+        {/* Join by code */}
+        <form onSubmit={handleJoin} className="mb-6 rounded-3xl border border-[var(--wave-line)] bg-[color-mix(in_oklab,var(--shell)_86%,transparent)] px-4 py-3 shadow-sm backdrop-blur rise-in">
+          <p className="sport-label text-[11px] text-[var(--text-muted)]">Código do torneio</p>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Input
+              placeholder="EX: AB3X9Z"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              maxLength={6}
+              className="font-mono tracking-[0.5em] uppercase text-lg"
+            />
+            <Button type="submit" disabled={joining || code.length < 6} className="shrink-0 gap-1.5">
+              {joining ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
+              Entrar
+            </Button>
+          </div>
+        </form>
+
+        <div className="mb-6 flex items-center justify-between gap-3 rise-in">
+          <div>
+            <p className="sport-label text-xs text-[var(--text-muted)]">Histórico de campeonatos</p>
+            <h1 className="display-title text-3xl font-bold text-[var(--text-heading)]">Torneios</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="rounded-2xl"
+              title="Atualizar lista"
+            >
+              <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Link to="/tournaments/new">
+              <Button className="gap-1.5 rounded-2xl bg-[var(--cta-primary)] px-6 text-base hover:bg-[var(--cta-primary-dark)]">
+                <Plus className="size-4" />
+                Novo
+              </Button>
+            </Link>
+          </div>
         </div>
-        <Link to="/tournaments/new">
-          <Button className="gap-1.5 rounded-2xl bg-[var(--cta-primary)] px-6 text-base hover:bg-[var(--cta-primary-dark)]">
-            <Plus className="size-4" />
-            Novo
-          </Button>
-        </Link>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-3xl" />
-          ))}
-        </div>
-      ) : tournaments.length === 0 ? (
-        <div className="surf-card texture-noise flex flex-col items-center gap-3 rounded-3xl px-6 py-16 text-center text-[var(--text-muted)]">
-          <Trophy className="size-12 text-[var(--cta-primary)]" />
-          <p className="text-sm">Nenhum torneio ainda.</p>
-          <Link to="/tournaments/new" className="text-sm font-semibold text-[var(--cta-primary)] underline underline-offset-4">
-            Criar primeiro torneio
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-3 rise-in" style={{ animationDelay: '80ms' }}>
-          {tournaments.map((t) => (
-            <TournamentCard key={t.id} tournament={t} />
-          ))}
-        </div>
-      )}
+      {/* Scrollable tournaments list */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ scrollBehavior: 'smooth' }}>
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 w-full rounded-3xl" />
+            ))}
+          </div>
+        ) : tournaments.length === 0 ? (
+          <div className="surf-card texture-noise flex flex-col items-center gap-3 rounded-3xl px-6 py-16 text-center text-[var(--text-muted)]">
+            <Trophy className="size-12 text-[var(--cta-primary)]" />
+            <p className="text-sm">Nenhum torneio ainda.</p>
+            <Link to="/tournaments/new" className="text-sm font-semibold text-[var(--cta-primary)] underline underline-offset-4">
+              Criar primeiro torneio
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3 rise-in" style={{ animationDelay: '80ms' }}>
+            {tournaments.map((t) => (
+              <TournamentCard key={t.id} tournament={t} />
+            ))}
+          </div>
+        )}
+      </div>
     </main>
   )
 }

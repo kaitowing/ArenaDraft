@@ -207,6 +207,10 @@ pre code {
   border-color: rgba(255, 255, 255, 0.9);
 }
 
+.surf-card.no-hover:hover {
+  transform: none;
+}
+
 .texture-noise {
   position: relative;
 }
@@ -253,4 +257,34 @@ pre code {
     transform: translateX(10%);
     opacity: 0.45;
   }
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--wave-line);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sea-ink-soft);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--wave-line) transparent;
 }

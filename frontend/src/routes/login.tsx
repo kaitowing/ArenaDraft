@@ -96,6 +96,12 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md rise-in">
         <div className="mb-8 text-center">
+          <img
+            src="/logo.png"
+            alt="ArenaDraft"
+            className="mx-auto h-32 w-32"
+            style={{ transform: 'translateX(-3px)' }}
+          />
           <h1 className="display-title text-4xl font-bold text-[var(--sea-ink)]">ArenaDraft</h1>
           <p className="mt-1 text-sm text-[var(--sea-ink-soft)]">Vôlei de areia. Ranking real.</p>
         </div>

@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore'
+import { collection, getDocs, limit, onSnapshot, query, where } from 'firebase/firestore'
 import { useEffect, useRef } from 'react'
 import { db } from '#/lib/firebase'
-import type { AppUser } from '#/types'
+import type { AppUser, MedalAward } from '#/types'
 
 export const GLOBAL_CITY = 'GLOBAL'
 
@@ -19,6 +19,47 @@ export function useRanking(cityId: string = GLOBAL_CITY) {
         .map((d) => d.data() as AppUser)
         .sort((a, b) => b.mmr - a.mmr)
     },
+  })
+}
+
+export function usePlayerProfile(uid: string) {
+  return useQuery({
+    queryKey: ['player-profile', uid],
+    queryFn: async () => {
+      const q = query(collection(db, 'users'), where('uid', '==', uid), limit(1))
+      const snapshot = await getDocs(q)
+      if (snapshot.empty) return null
+      return snapshot.docs[0].data() as AppUser
+    },
+    enabled: !!uid,
+  })
+}
+
+export function useMedals(uid: string) {
+  return useQuery({
+    queryKey: ['medals', uid],
+    queryFn: async () => {
+      const q = query(collection(db, 'medals'), where('uid', '==', uid))
+      const snapshot = await getDocs(q)
+      return snapshot.docs
+        .map((d) => d.data() as MedalAward)
+        .sort((a, b) => b.awardedAt.toMillis() - a.awardedAt.toMillis())
+    },
+    enabled: !!uid,
+  })
+}
+
+export function useTournamentMedals(tournamentId: string) {
+  return useQuery({
+    queryKey: ['tournament-medals', tournamentId],
+    queryFn: async () => {
+      const q = query(collection(db, 'medals'), where('tournamentId', '==', tournamentId))
+      const snapshot = await getDocs(q)
+      return snapshot.docs
+        .map((d) => d.data() as MedalAward)
+        .sort((a, b) => b.awardedAt.toMillis() - a.awardedAt.toMillis())
+    },
+    enabled: !!tournamentId,
   })
 }
 

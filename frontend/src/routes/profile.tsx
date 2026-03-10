@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles } from 'lucide-react'
+import { ArrowLeft, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles, Medal } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
 import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
+import { useMedals } from '#/features/ranking/rankingQueries'
 import { updateUserProfile } from '#/features/auth/authService'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -51,12 +52,23 @@ function genderIcon(gender: Gender) {
   }
 }
 
+function medalLabel(id: string) {
+  if (id === 'owner_of_the_court') return 'Dono da quadra'
+  return id
+}
+
+function medalDescription(id: string) {
+  if (id === 'owner_of_the_court') return 'Venceu um torneio todos x todos sem perder set/jogo.'
+  return 'Conquista desbloqueada.'
+}
+
 function ProfileContent() {
   const { user: firebaseUser } = useAuth()
   const { toast } = useToast()
   const { data: cities = [] } = useCities()
 
   const { data: appUser, isLoading } = useAppUserRealtime(firebaseUser?.uid)
+  const { data: medals = [] } = useMedals(firebaseUser?.uid ?? '')
 
   const [saving, setSaving] = useState(false)
   const [displayName, setDisplayName] = useState(appUser?.displayName || firebaseUser?.displayName || '')
@@ -200,6 +212,35 @@ function ProfileContent() {
                 <p className="text-xs text-[var(--sea-ink-soft)]">Torneios</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rise-in" style={{ animationDelay: '90ms' }}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Medal className="size-4 text-[var(--cta-primary)]" />
+              Medalhas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {medals.length === 0 ? (
+              <p className="text-sm text-[var(--sea-ink-soft)]">Sem medalhas ainda.</p>
+            ) : (
+              <div className="space-y-2">
+                {medals.map((medal, index) => (
+                    <div
+                      key={`${medal.id}-${medal.tournamentId}-${index}`}
+                      className="island-shell rounded-2xl px-3 py-2.5"
+                    >
+                      <p className="text-sm font-semibold text-[var(--sea-ink)]"> 🥇 {medalLabel(medal.id)}</p>
+                      <p className="text-xs text-[var(--sea-ink-soft)]">{medalDescription(medal.id)}</p>
+                      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                        Conquistada em {medal.awardedAt.toDate().toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

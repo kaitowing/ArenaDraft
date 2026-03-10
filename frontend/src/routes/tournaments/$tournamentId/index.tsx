@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3 } from 'lucide-react'
+import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useTournamentRealtime, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
 import { forceCompleteTournament, cancelTournament, startTournament } from '#/features/tournaments/tournamentService'
@@ -16,8 +16,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
-import type { AppUser, Match, Tournament } from '#/types'
+import { useTournamentMedals } from '#/features/ranking/rankingQueries'
+import type { AppUser, Match, Tournament, MedalAward } from '#/types'
 import type { Pair } from '#/features/tournaments/algorithms'
+
+function medalLabel(id: string) {
+  if (id === 'owner_of_the_court') return 'Dono da quadra'
+  return id
+}
 
 export const Route = createFileRoute('/tournaments/$tournamentId/')({
   component: TournamentPage,
@@ -36,8 +42,14 @@ function getInitials(name: string) {
 }
 
 function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left' | 'right' }) {
-  const content = (
-    <>
+  return (
+    <Link
+      to="/players/$userId"
+      params={{ userId: player.uid }}
+      className={`flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--shell)_85%,transparent)] px-2 py-1 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer ${
+        align === 'right' ? 'flex-row-reverse text-right' : ''
+      }`}
+    >
       <Avatar className="h-7 w-7 border border-white/60 shadow-sm">
         <AvatarImage src={player.photoURL ?? undefined} />
         <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
@@ -45,17 +57,7 @@ function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left
       <span className="truncate text-sm font-semibold text-[var(--text-heading)]">
         {player.displayName}
       </span>
-    </>
-  )
-
-  return (
-    <span
-      className={`flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--shell)_85%,transparent)] px-2 py-1 ${
-        align === 'right' ? 'flex-row-reverse text-right' : ''
-      }`}
-    >
-      {content}
-    </span>
+    </Link>
   )
 }
 
@@ -391,7 +393,12 @@ function LobbyView({
         </p>
         <div className="space-y-2">
           {players.map((player) => (
-            <div key={player.uid} className="island-shell rounded-xl px-4 py-2.5 flex items-center gap-3">
+            <Link
+              key={player.uid}
+              to="/players/$userId"
+              params={{ userId: player.uid }}
+              className="island-shell rounded-xl px-4 py-2.5 flex items-center gap-3 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer"
+            >
               <Avatar className="h-8 w-8">
                 <AvatarImage src={player.photoURL ?? undefined} />
                 <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
@@ -401,7 +408,7 @@ function LobbyView({
               {player.uid === tournament.createdBy && (
                 <Badge variant="default" className="text-[10px]">Organizador</Badge>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -485,6 +492,7 @@ function TournamentContent() {
   )
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { data: tournamentMedals = [] } = useTournamentMedals(tournamentId)
 
   const isLoading = tLoading || mLoading || pLoading
   const roundNumbers = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b)
@@ -499,6 +507,9 @@ function TournamentContent() {
       !authLoading,
   )
 
+  const medalWinners = tournamentMedals
+    .map((medal) => ({ medal, player: players.find((p) => p.uid === medal.uid) }))
+    .filter((entry): entry is { medal: MedalAward; player: AppUser } => Boolean(entry.player))
   async function handleForceComplete() {
     if (!tournament) return
     try {
@@ -666,6 +677,34 @@ function TournamentContent() {
               ))}
             </>
           )}
+        </div>
+      )}
+      {tournament.status === 'completed' && medalWinners.length > 0 && (
+        <div className="rise-in mb-4">
+          <Card className="rounded-3xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Medal className="size-4 text-[var(--cta-primary)]" />
+                Campeões de Medalhas
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {medalWinners.map(({ medal, player }) => (
+                <div key={`${medal.uid}-${medal.tournamentId}`} className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={player.photoURL ?? undefined} />
+                    <AvatarFallback className="text-sm">{player.displayName.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[var(--sea-ink)]">{player.displayName}</p>
+                    <p className="text-xs text-[var(--sea-ink-soft)]">
+                      {medalLabel(medal.id)} · {medal.awardedAt.toDate().toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       )}
     </main>

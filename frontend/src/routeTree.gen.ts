@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TournamentsIndexRouteImport } from './routes/tournaments/index'
 import { Route as TournamentsNewRouteImport } from './routes/tournaments/new'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
+import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
 import { Route as TournamentsTournamentIdIndexRouteImport } from './routes/tournaments/$tournamentId/index'
 import { Route as TournamentsTournamentIdMatchMatchIdRouteImport } from './routes/tournaments/$tournamentId/match/$matchId'
 
@@ -48,6 +49,11 @@ const TournamentsTournamentIdRoute = TournamentsTournamentIdRouteImport.update({
   path: '/tournaments/$tournamentId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayersUserIdRoute = PlayersUserIdRouteImport.update({
+  id: '/players/$userId',
+  path: '/players/$userId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TournamentsTournamentIdIndexRoute =
   TournamentsTournamentIdIndexRouteImport.update({
     id: '/',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRouteWithChildren
   '/tournaments/new': typeof TournamentsNewRoute
   '/tournaments/': typeof TournamentsIndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/new': typeof TournamentsNewRoute
   '/tournaments': typeof TournamentsIndexRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdIndexRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRouteWithChildren
   '/tournaments/new': typeof TournamentsNewRoute
   '/tournaments/': typeof TournamentsIndexRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
+    | '/players/$userId'
     | '/tournaments/$tournamentId'
     | '/tournaments/new'
     | '/tournaments/'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
+    | '/players/$userId'
     | '/tournaments/new'
     | '/tournaments'
     | '/tournaments/$tournamentId'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
+    | '/players/$userId'
     | '/tournaments/$tournamentId'
     | '/tournaments/new'
     | '/tournaments/'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  PlayersUserIdRoute: typeof PlayersUserIdRoute
   TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRouteWithChildren
   TournamentsNewRoute: typeof TournamentsNewRoute
   TournamentsIndexRoute: typeof TournamentsIndexRoute
@@ -176,6 +189,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TournamentsTournamentIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/players/$userId': {
+      id: '/players/$userId'
+      path: '/players/$userId'
+      fullPath: '/players/$userId'
+      preLoaderRoute: typeof PlayersUserIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tournaments/$tournamentId/': {
       id: '/tournaments/$tournamentId/'
       path: '/'
@@ -214,6 +234,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  PlayersUserIdRoute: PlayersUserIdRoute,
   TournamentsTournamentIdRoute: TournamentsTournamentIdRouteWithChildren,
   TournamentsNewRoute: TournamentsNewRoute,
   TournamentsIndexRoute: TournamentsIndexRoute,

@@ -67,7 +67,7 @@ function DashboardContent() {
       </div>
 
       <div className="rise-in" style={{ animationDelay: '80ms' }}>
-        <RankingTable players={players} isLoading={isLoading} />
+        <RankingTable players={players} currentUserId={user?.uid} isLoading={isLoading} />
       </div>
 
       <Link to="/tournaments/new">

@@ -10,6 +10,15 @@ export interface City {
 
 export type Gender = 'male' | 'female'
 
+export type MedalId = 'owner_of_the_court'
+
+export interface MedalAward {
+  id: MedalId
+  uid: string
+  awardedAt: Timestamp
+  tournamentId: string
+}
+
 export interface AppUser {
   uid: string
   displayName: string
