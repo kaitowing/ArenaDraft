@@ -2,9 +2,15 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main, pipe]
+    branches: [ main, pipe ]
   pull_request:
     branches: [ main, pipe ]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build-and-deploy:
