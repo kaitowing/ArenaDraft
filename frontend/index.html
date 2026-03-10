@@ -6,6 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="ArenaDraft – Gerencie seus torneios de vôlei de areia com ranking histórico e matchmaking dinâmico." />
     <title>ArenaDraft</title>
+    <script>
+      // Restore path after 404 redirect from GitHub Pages
+      (function () {
+        var redirect = sessionStorage.redirect
+        delete sessionStorage.redirect
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect)
+        }
+        var search = location.search
+        if (search) {
+          var p = search.slice(1).split('&').find(function (s) { return s.startsWith('p=/') })
+          if (p) {
+            var path = '/' + p.slice(3).replace(/~and~/g, '&')
+            var q = search.slice(1).split('&').find(function (s) { return s.startsWith('q=') })
+            var query = q ? '?' + q.slice(2).replace(/~and~/g, '&') : ''
+            history.replaceState(null, null, '/ArenaDraft' + path + query + location.hash)
+          }
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>
