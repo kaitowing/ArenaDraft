@@ -1,13 +1,25 @@
-Welcome to your new TanStack Start app! 
+# ArenaDraft 🏐
 
-# Getting Started
+Gerenciador de torneios de vôlei de areia com ranking histórico e matchmaking dinâmico (MMR/Elo).
 
-To run this application:
+## Setup
 
-```bash
-bun install
-bun --bun run dev
-```
+1. **Clone e instale as dependências:**
+   ```bash
+   cd frontend
+   bun install
+   ```
+
+2. **Configure as variáveis de ambiente:**
+   ```bash
+   cp .env.example .env.local
+   # Preencha com suas credenciais do Firebase Console
+   ```
+
+3. **Rode em desenvolvimento:**
+   ```bash
+   bun --bun run dev
+   ```
 
 # Building For Production
 
