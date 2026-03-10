@@ -37,9 +37,8 @@ export async function createTournamentLobby(
   { name = 'Torneio do Dia', isRoundTrip = false, format = DEFAULT_TOURNAMENT_FORMAT, category = DEFAULT_TOURNAMENT_CATEGORY, groupCount = 2, advancePerGroup = 2 }: CreateTournamentOptions = {},
 ): Promise<string> {
   const pairPolicy = getPairPolicy(category)
-  const bracketSize = Math.max(advancePerGroup * groupCount, 0)
   const tournamentRef = doc(collection(db, 'tournaments'))
-  const tournamentData: Omit<Tournament, 'id'> = {
+  const tournamentData: Partial<Omit<Tournament, 'id'>> = {
     name,
     date: new Date().toISOString().split('T')[0],
     status: 'waiting',
@@ -51,12 +50,17 @@ export async function createTournamentLobby(
     format,
     category,
     pairPolicy,
-    groupCount: format === 'classic' ? groupCount : undefined,
-    advancePerGroup: format === 'classic' ? advancePerGroup : undefined,
-    bracketSize: format === 'classic' ? bracketSize : undefined,
     bracketGenerated: false,
     createdAt: serverTimestamp() as Tournament['createdAt'],
   }
+
+  if (format === 'classic') {
+    const bracketSize = Math.max(advancePerGroup * groupCount, 0)
+    tournamentData.groupCount = groupCount
+    tournamentData.advancePerGroup = advancePerGroup
+    tournamentData.bracketSize = bracketSize
+  }
+
   const batch = writeBatch(db)
   batch.set(tournamentRef, tournamentData)
   await batch.commit()

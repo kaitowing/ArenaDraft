@@ -2,14 +2,10 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Globe, MapPin, Plus } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
-import { useRanking, GLOBAL_CITY } from '#/features/ranking/rankingQueries'
-import { useCities } from '#/features/tournaments/tournamentQueries'
+import { useRankingRealtime, GLOBAL_CITY } from '#/features/ranking/rankingQueries'
+import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
 import { RankingTable } from '#/features/ranking/RankingTable'
 import { useAuth } from '#/features/auth/useAuth'
-import { useQuery } from '@tanstack/react-query'
-import { collection, getDocs, query, where } from 'firebase/firestore'
-import { db } from '#/lib/firebase'
-import type { AppUser } from '#/types'
 
 export const Route = createFileRoute('/')({ component: Dashboard })
 
@@ -25,19 +21,9 @@ function DashboardContent() {
   const { user } = useAuth()
   const [selectedCity, setSelectedCity] = useState<string>(GLOBAL_CITY)
 
-  const { data: appUser } = useQuery({
-    queryKey: ['appUser', user?.uid],
-    queryFn: async () => {
-      if (!user) return null
-      const q = query(collection(db, 'users'), where('uid', '==', user.uid))
-      const snap = await getDocs(q)
-      return snap.empty ? null : (snap.docs[0].data() as AppUser)
-    },
-    enabled: !!user,
-  })
-
+  const { data: appUser } = useAppUserRealtime(user?.uid)
   const { data: cities = [] } = useCities()
-  const { data: players = [], isLoading } = useRanking(selectedCity)
+  const { data: players = [], isLoading } = useRankingRealtime(selectedCity)
 
   const userCityIds = appUser?.cities ?? []
   const userCities = cities.filter((c) => userCityIds.includes(c.id))

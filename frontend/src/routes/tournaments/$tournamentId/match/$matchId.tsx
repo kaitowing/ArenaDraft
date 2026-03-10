@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ChevronLeft, Loader2, Plus, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AuthGuard } from '#/features/auth/AuthGuard'
-import { useMatch } from '#/features/matches/matchQueries'
+import { useMatchRealtime } from '#/features/matches/matchQueries'
 import { updateMatchScore } from '#/features/matches/matchService'
 import { useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
 import { ScoreInput } from '#/features/matches/ScoreInput'
@@ -74,7 +74,7 @@ function MatchContent() {
   const { toast } = useToast()
   const { user } = useAuth()
 
-  const { data: match, isLoading: mLoading } = useMatch(matchId)
+  const { data: match, isLoading: mLoading } = useMatchRealtime(matchId)
   const { data: players = [], isLoading: pLoading } = useTournamentPlayers(
     match ? [...match.teamA.playerIds, ...match.teamB.playerIds] : [],
   )

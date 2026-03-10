@@ -2,9 +2,9 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3 } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
-import { useTournament, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
+import { useTournamentRealtime, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
 import { forceCompleteTournament, cancelTournament, startTournament } from '#/features/tournaments/tournamentService'
-import { useMatches } from '#/features/matches/matchQueries'
+import { useMatchesRealtime } from '#/features/matches/matchQueries'
 import { PairEditor } from '#/features/tournaments/PairEditor'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -474,10 +474,10 @@ function LobbyView({
 function TournamentContent() {
   const { tournamentId } = Route.useParams()
   const { user, loading: authLoading } = useAuth()
-  const { data: tournament, isLoading: tLoading, error: tError } = useTournament(tournamentId)
+  const { data: tournament, isLoading: tLoading, error: tError } = useTournamentRealtime(tournamentId)
   const isParticipant = Boolean(user && tournament?.participants?.includes(user.uid))
   const canLoadMatches = Boolean(tournament && tournament.status !== 'waiting' && isParticipant)
-  const { data: matches = [], isLoading: mLoading, error: mError } = useMatches(tournamentId, {
+  const { data: matches = [], isLoading: mLoading, error: mError } = useMatchesRealtime(tournamentId, {
     enabled: canLoadMatches,
   })
   const { data: players = [], isLoading: pLoading, error: pError } = useTournamentPlayers(

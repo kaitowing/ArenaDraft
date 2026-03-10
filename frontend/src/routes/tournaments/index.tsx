@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Loader2, LogIn, Plus, Trophy } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { TournamentCard } from '#/features/tournaments/TournamentCard'
-import { useTournaments } from '#/features/tournaments/tournamentQueries'
+import { useTournamentsRealtime } from '#/features/tournaments/tournamentQueries'
 import { joinTournamentByCode } from '#/features/tournaments/tournamentService'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -27,7 +27,7 @@ function TournamentsContent() {
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
-  const { data: tournaments = [], isLoading } = useTournaments()
+  const { data: tournaments = [], isLoading } = useTournamentsRealtime()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
 

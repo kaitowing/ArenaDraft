@@ -3,17 +3,14 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
-import { useCities } from '#/features/tournaments/tournamentQueries'
+import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
 import { updateUserProfile } from '#/features/auth/authService'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { useToast } from '#/hooks/useToast'
-import { useQuery } from '@tanstack/react-query'
-import { collection, getDocs, query, where } from 'firebase/firestore'
-import { db } from '#/lib/firebase'
-import type { AppUser, Gender } from '#/types'
+import type { Gender } from '#/types'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -59,16 +56,7 @@ function ProfileContent() {
   const { toast } = useToast()
   const { data: cities = [] } = useCities()
 
-  const { data: appUser, isLoading } = useQuery({
-    queryKey: ['appUser', firebaseUser?.uid],
-    queryFn: async () => {
-      if (!firebaseUser) return null
-      const q = query(collection(db, 'users'), where('uid', '==', firebaseUser.uid))
-      const snap = await getDocs(q)
-      return snap.empty ? null : (snap.docs[0].data() as AppUser)
-    },
-    enabled: !!firebaseUser,
-  })
+  const { data: appUser, isLoading } = useAppUserRealtime(firebaseUser?.uid)
 
   const [saving, setSaving] = useState(false)
   const [displayName, setDisplayName] = useState(appUser?.displayName || firebaseUser?.displayName || '')
