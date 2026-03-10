@@ -118,8 +118,8 @@ function MatchContent() {
           user.uid,
         )
       }
-      await queryClient.invalidateQueries({ queryKey: ['matches', tournamentId] })
-      await queryClient.invalidateQueries({ queryKey: ['match', matchId] })
+      await queryClient.invalidateQueries({ queryKey: ['matches-realtime', tournamentId] })
+      await queryClient.invalidateQueries({ queryKey: ['match-realtime', matchId] })
       await queryClient.invalidateQueries({ queryKey: ['ranking'] })
       toast({ title: 'Placar salvo! ✓' })
       void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })

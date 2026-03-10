@@ -111,6 +111,7 @@ export async function startTournament(
       tournamentId,
       isRoundTrip: tournament.isRoundTrip,
       stage: 'group',
+      importanceWeight: 1,
     })
     for (const match of matches) {
       const matchRef = doc(collection(db, 'matches'))
