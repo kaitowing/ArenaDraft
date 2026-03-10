@@ -5,7 +5,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from 'firebase/auth'
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '#/lib/firebase'
 
 export async function signInWithEmail(email: string, password: string) {
@@ -48,4 +48,19 @@ export async function sendPasswordReset(email: string) {
 
 export async function signOut() {
   await firebaseSignOut(auth)
+}
+
+export async function updateUserProfile(
+  uid: string,
+  updates: { displayName?: string; cities?: string[] },
+) {
+  const userRef = doc(db, 'users', uid)
+
+  // Update Firestore document
+  await updateDoc(userRef, updates)
+
+  // Update Firebase Auth profile if displayName changed
+  if (updates.displayName && auth.currentUser) {
+    await updateProfile(auth.currentUser, { displayName: updates.displayName })
+  }
 }

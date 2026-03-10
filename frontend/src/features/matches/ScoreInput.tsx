@@ -1,15 +1,18 @@
-import { Minus, Plus } from 'lucide-react'
-import { Button } from '#/components/ui/button'
+import type { ChangeEvent } from 'react'
 
 interface ScoreInputProps {
   label: string
   score: number
-  onIncrement: () => void
-  onDecrement: () => void
+  onChange: (score: number) => void
   highlight?: boolean
 }
 
-export function ScoreInput({ label, score, onIncrement, onDecrement, highlight }: ScoreInputProps) {
+export function ScoreInput({ label, score, onChange, highlight }: ScoreInputProps) {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10) || 0
+    onChange(Math.max(0, value))
+  }
+
   return (
     <div
       className={`flex flex-col items-center gap-4 rounded-3xl p-6 transition-all ${
@@ -25,42 +28,17 @@ export function ScoreInput({ label, score, onIncrement, onDecrement, highlight }
       >
         {label}
       </p>
-      <span
-        className={`text-7xl font-bold tabular-nums leading-none ${
+      <input
+        type="number"
+        min={0}
+        max={99}
+        value={score}
+        onChange={handleChange}
+        className={`w-32 text-center text-7xl font-bold tabular-nums leading-none bg-transparent border-none outline-none ${
           highlight ? 'text-white' : 'text-[var(--sea-ink)]'
         }`}
-      >
-        {score}
-      </span>
-      <div className="flex gap-4">
-        <Button
-          size="xl"
-          variant={highlight ? 'outline' : 'default'}
-          onClick={onDecrement}
-          disabled={score <= 0}
-          className={
-            highlight
-              ? 'border-white/30 bg-white/10 text-white hover:bg-white/20 h-16 w-16 rounded-2xl text-2xl'
-              : 'h-16 w-16 rounded-2xl text-2xl'
-          }
-          aria-label={`Diminuir placar de ${label}`}
-        >
-          <Minus className="size-6" />
-        </Button>
-        <Button
-          size="xl"
-          variant={highlight ? 'secondary' : 'default'}
-          onClick={onIncrement}
-          className={
-            highlight
-              ? 'bg-white text-[var(--lagoon-deep)] hover:bg-white/90 h-16 w-16 rounded-2xl text-2xl font-bold'
-              : 'h-16 w-16 rounded-2xl text-2xl'
-          }
-          aria-label={`Aumentar placar de ${label}`}
-        >
-          <Plus className="size-6" />
-        </Button>
-      </div>
+        aria-label={`Pontos de ${label}`}
+      />
     </div>
   )
 }

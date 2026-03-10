@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore'
+import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
 import type { AppUser } from '#/types'
 
@@ -9,13 +9,14 @@ export function useRanking(cityId: string = GLOBAL_CITY) {
   return useQuery({
     queryKey: ['ranking', cityId],
     queryFn: async () => {
-      const constraints =
+      const q =
         cityId === GLOBAL_CITY
-          ? [orderBy('mmr', 'desc')]
-          : [where('cities', 'array-contains', cityId), orderBy('mmr', 'desc')]
-      const q = query(collection(db, 'users'), ...constraints)
+          ? query(collection(db, 'users'))
+          : query(collection(db, 'users'), where('cities', 'array-contains', cityId))
       const snapshot = await getDocs(q)
-      return snapshot.docs.map((d) => d.data() as AppUser)
+      return snapshot.docs
+        .map((d) => d.data() as AppUser)
+        .sort((a, b) => b.mmr - a.mmr)
     },
   })
 }

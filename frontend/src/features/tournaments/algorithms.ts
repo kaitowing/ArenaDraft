@@ -16,14 +16,10 @@ export function snakeDraft(players: AppUser[]): Pair[] {
   return pairs
 }
 
-/**
- * Polygon (Round Robin) algorithm.
- * Fixes pair[0], rotates the rest to generate all rounds.
- * Each round contains matchups between pairs that haven't played each other yet.
- */
 export function generateRoundRobin(
   pairs: Pair[],
   tournamentId: string,
+  isRoundTrip = false,
 ): Omit<Match, 'id'>[] {
   const n = pairs.length
   const matches: Omit<Match, 'id'>[] = []
@@ -38,8 +34,8 @@ export function generateRoundRobin(
 
   const totalRounds = n - 1
 
-  for (let round = 0; round < totalRounds; round++) {
-    // Build this round's pairings from the polygon rotation
+  // Generate matches for each round (and return round if round-trip)
+  const generateRoundMatches = (round: number, reverseTeams = false): Omit<Match, 'id'>[] => {
     const roundIndices = [fixed, ...rotating]
     const matchesThisRound: Omit<Match, 'id'>[] = []
 
@@ -49,20 +45,26 @@ export function generateRoundRobin(
       const teamAPair = pairs[teamAIndex]
       const teamBPair = pairs[teamBIndex]
 
+      // For return round, swap teams
+      const [finalTeamA, finalTeamB] = reverseTeams 
+        ? [teamBPair, teamAPair] 
+        : [teamAPair, teamBPair]
+
       const teamA: Team = {
-        playerIds: [teamAPair[0].uid, teamAPair[1].uid],
+        playerIds: [finalTeamA[0].uid, finalTeamA[1].uid],
         score: null,
-        mmrAverage: Math.round((teamAPair[0].mmr + teamAPair[1].mmr) / 2),
+        mmrAverage: Math.round((finalTeamA[0].mmr + finalTeamA[1].mmr) / 2),
       }
       const teamB: Team = {
-        playerIds: [teamBPair[0].uid, teamBPair[1].uid],
+        playerIds: [finalTeamB[0].uid, finalTeamB[1].uid],
         score: null,
-        mmrAverage: Math.round((teamBPair[0].mmr + teamBPair[1].mmr) / 2),
+        mmrAverage: Math.round((finalTeamB[0].mmr + finalTeamB[1].mmr) / 2),
       }
 
       matchesThisRound.push({
         tournamentId,
         round: round + 1,
+        scoringFormat: 'points',
         teamA,
         teamB,
         status: 'pending',
@@ -72,7 +74,17 @@ export function generateRoundRobin(
       })
     }
 
-    matches.push(...matchesThisRound)
+    return matchesThisRound
+  }
+
+  for (let round = 0; round < totalRounds; round++) {
+    // First leg (ida)
+    matches.push(...generateRoundMatches(round, false))
+
+    // Second leg (volta) if round-trip
+    if (isRoundTrip) {
+      matches.push(...generateRoundMatches(round + totalRounds, true))
+    }
 
     // Rotate: last element of rotating goes to front
     rotating.unshift(rotating.pop()!)

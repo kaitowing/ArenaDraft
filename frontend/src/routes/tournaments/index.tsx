@@ -10,6 +10,7 @@ import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
+import { useQueryClient } from '@tanstack/react-query'
 
 export const Route = createFileRoute('/tournaments/')({ component: TournamentsPage })
 
@@ -25,6 +26,7 @@ function TournamentsContent() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const { data: tournaments = [], isLoading } = useTournaments()
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
@@ -35,6 +37,14 @@ function TournamentsContent() {
     setJoining(true)
     try {
       const tournamentId = await joinTournamentByCode(code, user.uid)
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
+        queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['matches', tournamentId] }),
+        queryClient.invalidateQueries({ queryKey: ['tournament-players'] }),
+      ])
+
       void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })
     } catch (err) {
       toast({ variant: 'destructive', title: 'Código inválido', description: String(err) })
