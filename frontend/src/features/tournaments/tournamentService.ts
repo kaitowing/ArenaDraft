@@ -125,7 +125,8 @@ export async function startTournament(
       batch.set(matchRef, match)
     }
   } else {
-    const groupCount = tournament.groupCount ?? 2
+    const maxGroups = Math.max(1, Math.floor(pairs.length / 2))
+    const groupCount = Math.min(tournament.groupCount ?? 2, maxGroups)
     const { groups, matches } = buildGroupStage(pairs, {
       tournamentId,
       groupCount,

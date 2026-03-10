@@ -120,6 +120,8 @@ function MatchContent() {
       }
       await queryClient.invalidateQueries({ queryKey: ['matches-realtime', tournamentId] })
       await queryClient.invalidateQueries({ queryKey: ['match-realtime', matchId] })
+      await queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] })
+      await queryClient.invalidateQueries({ queryKey: ['tournament-realtime', tournamentId] })
       await queryClient.invalidateQueries({ queryKey: ['ranking'] })
       toast({ title: 'Placar salvo! ✓' })
       void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })

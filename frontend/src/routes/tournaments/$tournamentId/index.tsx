@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
@@ -66,6 +66,7 @@ function MatchCard({ match, players }: { match: Match; players: AppUser[] }) {
   const finished = match.status === 'finished'
   const aWon = finished && (match.teamA.score ?? 0) > (match.teamB.score ?? 0)
   const bWon = finished && (match.teamB.score ?? 0) > (match.teamA.score ?? 0)
+  const navigate = useNavigate()
 
   const inner = (
     <div
@@ -139,13 +140,15 @@ function MatchCard({ match, players }: { match: Match; players: AppUser[] }) {
   if (finished) return <div>{inner}</div>
 
   return (
-    <Link
-      to="/tournaments/$tournamentId/match/$matchId"
-      params={{ tournamentId: match.tournamentId, matchId: match.id }}
-      className="block"
+    <button
+      type="button"
+      onClick={() =>
+        void navigate({ to: '/tournaments/$tournamentId/match/$matchId', params: { tournamentId: match.tournamentId, matchId: match.id } })
+      }
+      className="block w-full text-left"
     >
       {inner}
-    </Link>
+    </button>
   )
 }
 

@@ -34,7 +34,7 @@ export function ScoreInput({ label, score, onChange, highlight }: ScoreInputProp
         max={99}
         value={score}
         onChange={handleChange}
-        className={`w-32 text-center text-7xl font-bold tabular-nums leading-none bg-transparent border-none outline-none ${
+        className={`w-40 text-center text-7xl font-bold tabular-nums leading-none bg-transparent border-none outline-none ${
           highlight ? 'text-white' : 'text-[var(--sea-ink)]'
         }`}
         aria-label={`Pontos de ${label}`}
