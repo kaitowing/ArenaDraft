@@ -97,7 +97,7 @@ function LoginPage() {
       <div className="w-full max-w-md rise-in">
         <div className="mb-8 text-center">
           <img
-            src="/logo.png"
+            src={`${import.meta.env.BASE_URL}logo.png`}
             alt="ArenaDraft"
             className="mx-auto h-32 w-32"
             style={{ transform: 'translateX(-3px)' }}
