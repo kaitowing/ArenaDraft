@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Check, Loader2, Lock, Mail, MapPin, User } from 'lucide-react'
+import { Check, Loader2, Lock, Mail, MapPin, User, Venus, Mars, Sparkles } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Input } from '#/components/ui/input'
@@ -13,6 +13,7 @@ import {
 } from '#/features/auth/authService'
 import { useCities } from '#/features/tournaments/tournamentQueries'
 import { useToast } from '#/hooks/useToast'
+import type { Gender } from '#/types'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -25,6 +26,7 @@ function LoginPage() {
 
   const [loginForm, setLoginForm] = useState({ email: '', password: '' })
   const [signUpForm, setSignUpForm] = useState({ name: '', email: '', password: '' })
+  const [signUpGender, setSignUpGender] = useState<Gender>('male')
   const [selectedCities, setSelectedCities] = useState<string[]>([])
   const [resetEmail, setResetEmail] = useState('')
   const [resetSent, setResetSent] = useState(false)
@@ -62,7 +64,13 @@ function LoginPage() {
     }
     setLoading(true)
     try {
-      await signUpWithEmail(signUpForm.name, signUpForm.email, signUpForm.password, selectedCities)
+      await signUpWithEmail(
+        signUpForm.name,
+        signUpForm.email,
+        signUpForm.password,
+        selectedCities,
+        signUpGender,
+      )
       void navigate({ to: '/' })
     } catch (err) {
       toast({ variant: 'destructive', title: 'Erro ao criar conta', description: String(err) })
@@ -227,6 +235,38 @@ function LoginPage() {
                         })}
                       </div>
                     )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="flex items-center gap-1.5">
+                      <Sparkles className="size-4" />
+                      Gênero esportivo
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { value: 'male', label: 'Masculino', icon: Mars },
+                          { value: 'female', label: 'Feminino', icon: Venus },
+                        ] as const
+                      ).map(({ value, label, icon: Icon }) => {
+                        const active = signUpGender === value
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSignUpGender(value)}
+                            className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                              active
+                                ? 'border-[var(--lagoon-deep)] bg-[var(--foam)] text-[var(--lagoon-deep)]'
+                                : 'border-[var(--line)] text-[var(--sea-ink-soft)] hover:border-[var(--lagoon)]'
+                            }`}
+                          >
+                            <Icon className="size-4" />
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>

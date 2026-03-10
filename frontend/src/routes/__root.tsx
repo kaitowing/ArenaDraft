@@ -1,8 +1,9 @@
 import { Link, Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { Home, Trophy, User, LogOut } from 'lucide-react'
+import { Home, Trophy, User, LogOut, Circle } from 'lucide-react'
 import { Toaster } from '#/components/ui/toaster'
 import { useAuth } from '#/features/auth/useAuth'
 import { signOut } from '#/features/auth/authService'
+import { BeachBackdrop } from '#/components/BeachBackdrop'
 
 import '../styles.css'
 
@@ -24,7 +25,7 @@ function BottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] backdrop-blur-md">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--line)] bg-[color-mix(in_oklab,var(--shell)_82%,transparent)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-lg items-center justify-around px-4 py-2">
         {links.map(({ to, icon: Icon, label, exact }) => {
           const active = exact ? pathname === to : pathname.startsWith(to as string)
@@ -32,14 +33,17 @@ function BottomNav() {
             <Link
               key={to as string}
               to={to}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${
+              className={`relative flex flex-col items-center gap-0.5 rounded-xl px-4 py-1.5 transition-colors ${
                 active
-                  ? 'text-[var(--lagoon-deep)]'
+                  ? 'text-[var(--cta-primary)]'
                   : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
               }`}
             >
               <Icon className={`size-5 ${active ? 'stroke-[2.5]' : 'stroke-2'}`} />
               <span className="text-[10px] font-semibold">{label}</span>
+              {active && (
+                <Circle className="absolute -bottom-1 size-2 fill-[var(--cta-primary)] text-[var(--cta-primary)]" />
+              )}
             </Link>
           )
         })}
@@ -61,10 +65,10 @@ function BottomNav() {
 
 function RootComponent() {
   return (
-    <>
+    <BeachBackdrop>
       <Outlet />
       <BottomNav />
       <Toaster />
-    </>
+    </BeachBackdrop>
   )
 }

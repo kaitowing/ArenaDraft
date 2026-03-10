@@ -39,14 +39,14 @@ export function processMatchResult(
   teamA: TeamResult & { playerUids: [string, string] },
   teamB: TeamResult & { playerUids: [string, string] },
   marginPoints = 0,
+  importanceWeight = 1,
 ): MMRDelta[] {
   const eA = calcExpected(teamA.mmrAverage, teamB.mmrAverage)
   const eB = 1 - eA
 
   const resultA = teamA.won ? 1 : (0 as 1 | 0)
   const resultB = teamB.won ? 1 : (0 as 1 | 0)
-  const marginFactor = calcMarginFactor(Math.abs(marginPoints))
-
+  const marginFactor = calcMarginFactor(Math.abs(marginPoints)) * importanceWeight
   const deltas: MMRDelta[] = []
 
   for (let i = 0; i < 2; i++) {

@@ -8,6 +8,8 @@ export interface City {
   order?: number
 }
 
+export type Gender = 'male' | 'female'
+
 export interface AppUser {
   uid: string
   displayName: string
@@ -15,6 +17,7 @@ export interface AppUser {
   email: string | null
   mmr: number
   cities: string[]
+  gender: Gender | null
   stats: {
     tournamentsPlayed: number
     matchesWon: number
@@ -22,6 +25,10 @@ export interface AppUser {
   }
   createdAt: Timestamp
 }
+
+export type TournamentFormat = 'round_robin' | 'classic'
+export type TournamentCategory = 'unisex' | 'mixed' | 'open'
+export type PairPolicy = 'same_gender' | 'mixed_duo' | 'any'
 
 export interface Tournament {
   id: string
@@ -33,6 +40,22 @@ export interface Tournament {
   participants: string[]
   winnerTeam: [string, string] | null
   isRoundTrip: boolean
+  format: TournamentFormat
+  category: TournamentCategory
+  pairPolicy: PairPolicy
+  groupCount?: number
+  advancePerGroup?: number
+  bracketSize?: number
+  bracketGenerated?: boolean
+  groups?: Array<{
+    id: string
+    name: string
+    teams: Array<Team & {
+      wins: number
+      losses: number
+      points: number
+    }>
+  }>
   createdAt: Timestamp
 }
 
@@ -41,7 +64,12 @@ export interface Team {
   score: number | null
   sets?: number[]
   mmrAverage: number
+  genderPattern?: [Gender | null, Gender | null]
+  teamId?: string
 }
+
+export type MatchStage = 'group' | 'playoff'
+export type BracketRound = 'QF' | 'SF' | 'F' | 'R16'
 
 export interface Match {
   id: string
@@ -54,6 +82,12 @@ export interface Match {
   submittedBy: string | null
   eloApplied: boolean
   timestamp: Timestamp | null
+  stage?: MatchStage
+  groupId?: string | null
+  bracketRound?: BracketRound
+  seedA?: number
+  seedB?: number
+  importanceWeight?: number
 }
 
 export type MatchResult = 'teamA' | 'teamB' | null

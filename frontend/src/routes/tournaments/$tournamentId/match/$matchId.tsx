@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
-import type { AppUser } from '#/types'
+import type { AppUser, Match } from '#/types'
 
 export const Route = createFileRoute('/tournaments/$tournamentId/match/$matchId')({
   component: MatchPage,
@@ -25,6 +25,15 @@ function MatchPage() {
       <MatchContent />
     </AuthGuard>
   )
+}
+
+const BRACKET_LABELS: Record<string, string> = { R16: 'Oitavas', QF: 'Quartas', SF: 'Semifinal', F: 'Final' }
+
+function matchRoundLabel(match: Match): string {
+  if (match.stage === 'playoff' && match.bracketRound) {
+    return BRACKET_LABELS[match.bracketRound] ?? match.bracketRound
+  }
+  return `Rodada ${match.round}`
 }
 
 function getInitials(name: string) {
@@ -154,7 +163,7 @@ function MatchContent() {
           Voltar ao torneio
         </button>
         <h1 className="display-title text-2xl font-bold text-[var(--sea-ink)]">
-          Placar · Rodada {match.round}
+          Placar · {matchRoundLabel(match)}
         </h1>
       </div>
 
@@ -234,7 +243,6 @@ function MatchContent() {
             </button>
           </div>
 
-Points mode
           {scoringFormat === 'points' && (
             <div className="space-y-3">
               <ScoreInput

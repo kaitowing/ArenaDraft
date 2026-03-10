@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap");
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -7,71 +7,97 @@
 }
 
 :root {
-  --sea-ink: #173a40;
-  --sea-ink-soft: #416166;
-  --lagoon: #4fb8b2;
-  --lagoon-deep: #328f97;
+  --sky-dawn: #f5f8ff;
+  --sky-mid: #9acdfb;
+  --sky-deep: #1f6ca8;
+  --surf-foam: #fefff7;
+  --reef: #0f3a4b;
+  --reef-soft: #456271;
+  --sunset: #ff9c62;
+  --sunset-bold: #f36e3d;
   --palm: #2f6a4a;
-  --sand: #e7f0e8;
-  --foam: #f3faf5;
-  --surface: rgba(255, 255, 255, 0.74);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(23, 58, 64, 0.14);
-  --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: rgba(47, 106, 74, 0.9);
-  --bg-base: #e7f3ec;
-  --header-bg: rgba(251, 255, 248, 0.84);
-  --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(47, 106, 74, 0.18);
-  --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(79, 184, 178, 0.36);
-  --hero-b: rgba(47, 106, 74, 0.2);
+  --dune: #f6e6c7;
+  --dune-strong: #e8cfa1;
+  --shell: #fff8ed;
+  --boardwalk: #f2f0eb;
+  --wave-line: rgba(15, 58, 75, 0.1);
+  --card-sand: rgba(255, 255, 255, 0.78);
+  --card-sand-strong: rgba(255, 255, 255, 0.92);
+  --badge-gold: #ffd75e;
+  --badge-silver: #c5d5dd;
+  --badge-bronze: #c78352;
+  --text-heading: #163544;
+  --text-body: #274c58;
+  --text-muted: #6a7c84;
+  --cta-primary: #f06436;
+  --cta-primary-dark: #cf4d20;
+  --cta-accent: #14a9a0;
+  --bg-base: var(--surf-foam);
+  --gradient-top: #cbe7ff;
+  --gradient-mid: #f6f7d1;
+  --gradient-bottom: #fbe3b3;
+
+  /* Legacy aliases (to be refactored out) */
+  --sea-ink: var(--text-body);
+  --sea-ink-soft: var(--text-muted);
+  --lagoon: var(--cta-accent);
+  --lagoon-deep: var(--cta-primary);
+  --sand: var(--shell);
+  --foam: var(--surf-foam);
+  --surface: var(--card-sand);
+  --surface-strong: var(--card-sand-strong);
+  --line: var(--wave-line);
+  --header-bg: rgba(255, 255, 255, 0.82);
+  --chip-bg: rgba(255, 255, 255, 0.9);
+  --chip-line: rgba(22, 53, 68, 0.12);
+  --link-bg-hover: rgba(255, 255, 255, 0.95);
 }
 
 :root[data-theme="dark"] {
-  --sea-ink: #d7ece8;
-  --sea-ink-soft: #afcdc8;
-  --lagoon: #60d7cf;
-  --lagoon-deep: #8de5db;
-  --palm: #6ec89a;
-  --sand: #0f1a1e;
-  --foam: #101d22;
-  --surface: rgba(16, 30, 34, 0.8);
-  --surface-strong: rgba(15, 27, 31, 0.92);
-  --line: rgba(141, 229, 219, 0.18);
-  --inset-glint: rgba(194, 247, 238, 0.14);
-  --kicker: #b8efe5;
-  --bg-base: #0a1418;
-  --header-bg: rgba(10, 20, 24, 0.8);
-  --chip-bg: rgba(13, 28, 32, 0.9);
-  --chip-line: rgba(141, 229, 219, 0.24);
-  --link-bg-hover: rgba(24, 44, 49, 0.8);
-  --hero-a: rgba(96, 215, 207, 0.18);
-  --hero-b: rgba(110, 200, 154, 0.12);
-}
+  --sky-dawn: #0d1b28;
+  --sky-mid: #113a51;
+  --sky-deep: #09141d;
+  --surf-foam: #061217;
+  --reef: #d8ecf6;
+  --reef-soft: #a3c1ce;
+  --sunset: #ffa37a;
+  --sunset-bold: #ff7840;
+  --palm: #70c290;
+  --dune: #2a1b08;
+  --dune-strong: #3a220c;
+  --shell: #180f05;
+  --boardwalk: #1f1206;
+  --wave-line: rgba(216, 236, 246, 0.2);
+  --card-sand: rgba(12, 24, 32, 0.86);
+  --card-sand-strong: rgba(10, 20, 28, 0.94);
+  --badge-gold: #fdd157;
+  --badge-silver: #7e98a5;
+  --badge-bronze: #e38e55;
+  --text-heading: #eff6f9;
+  --text-body: #ccdce2;
+  --text-muted: #8da6b1;
+  --cta-primary: #ff8f5a;
+  --cta-primary-dark: #ff6b29;
+  --cta-accent: #51e0d6;
+  --bg-base: #060f14;
+  --gradient-top: #072337;
+  --gradient-mid: #122736;
+  --gradient-bottom: #1f1508;
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --sea-ink: #d7ece8;
-    --sea-ink-soft: #afcdc8;
-    --lagoon: #60d7cf;
-    --lagoon-deep: #8de5db;
-    --palm: #6ec89a;
-    --sand: #0f1a1e;
-    --foam: #101d22;
-    --surface: rgba(16, 30, 34, 0.8);
-    --surface-strong: rgba(15, 27, 31, 0.92);
-    --line: rgba(141, 229, 219, 0.18);
-    --inset-glint: rgba(194, 247, 238, 0.14);
-    --kicker: #b8efe5;
-    --bg-base: #0a1418;
-    --header-bg: rgba(10, 20, 24, 0.8);
-    --chip-bg: rgba(13, 28, 32, 0.9);
-    --chip-line: rgba(141, 229, 219, 0.24);
-    --link-bg-hover: rgba(24, 44, 49, 0.8);
-    --hero-a: rgba(96, 215, 207, 0.18);
-    --hero-b: rgba(110, 200, 154, 0.12);
-  }
+  /* Legacy aliases (to be refactored out) */
+  --sea-ink: var(--text-body);
+  --sea-ink-soft: var(--text-muted);
+  --lagoon: var(--cta-accent);
+  --lagoon-deep: var(--cta-primary);
+  --sand: var(--shell);
+  --foam: var(--surf-foam);
+  --surface: var(--card-sand);
+  --surface-strong: var(--card-sand-strong);
+  --line: var(--wave-line);
+  --header-bg: rgba(6, 15, 20, 0.92);
+  --chip-bg: rgba(10, 22, 30, 0.88);
+  --chip-line: rgba(216, 236, 246, 0.2);
+  --link-bg-hover: rgba(13, 27, 38, 0.86);
 }
 
 * {
@@ -86,14 +112,12 @@ body,
 
 body {
   margin: 0;
-  color: var(--sea-ink);
+  color: var(--text-body);
   font-family: var(--font-sans);
   background-color: var(--bg-base);
   background:
-    radial-gradient(1100px 620px at -8% -10%, var(--hero-a), transparent 58%),
-    radial-gradient(1050px 620px at 112% -12%, var(--hero-b), transparent 62%),
-    radial-gradient(720px 380px at 50% 115%, rgba(79, 184, 178, 0.1), transparent 68%),
-    linear-gradient(180deg, color-mix(in oklab, var(--sand) 68%, white) 0%, var(--foam) 44%, var(--bg-base) 100%);
+    radial-gradient(1600px 920px at 50% -20%, rgba(255, 255, 255, 0.65), transparent 50%),
+    linear-gradient(180deg, var(--gradient-top) 0%, var(--gradient-mid) 46%, var(--gradient-bottom) 100%);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -105,11 +129,11 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.28;
+  opacity: 0.3;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.8), transparent 34%),
-    radial-gradient(circle at 78% 26%, rgba(79, 184, 178, 0.2), transparent 42%),
-    radial-gradient(circle at 42% 82%, rgba(47, 106, 74, 0.14), transparent 36%);
+    radial-gradient(circle at 18% 15%, rgba(255, 255, 255, 0.6), transparent 38%),
+    radial-gradient(circle at 80% 20%, rgba(255, 188, 130, 0.3), transparent 38%),
+    radial-gradient(circle at 50% 90%, rgba(227, 149, 70, 0.25), transparent 42%);
 }
 
 body::after {
@@ -118,12 +142,12 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.14;
+  opacity: 0.35;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
+    linear-gradient(110deg, rgba(255, 255, 255, 0.07) 25%, transparent 26%, transparent 74%, rgba(255, 255, 255, 0.07) 75%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 200px 200px, 60px 60px;
+  mask-image: radial-gradient(circle at 50% 30%, rgba(0, 0, 0, 0.6), transparent 85%);
 }
 
 a {
@@ -155,7 +179,7 @@ pre code {
 }
 
 .page-wrap {
-  width: min(1080px, calc(100% - 2rem));
+  width: min(1100px, calc(100% - 2.5rem));
   margin-inline: auto;
 }
 
@@ -163,97 +187,70 @@ pre code {
   font-family: "Fraunces", Georgia, serif;
 }
 
-.island-shell {
-  border: 1px solid var(--line);
-  background: linear-gradient(165deg, var(--surface-strong), var(--surface));
+.sport-label {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.surf-card {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: linear-gradient(160deg, var(--card-sand-strong), var(--card-sand));
   box-shadow:
-    0 1px 0 var(--inset-glint) inset,
-    0 22px 44px rgba(30, 90, 72, 0.1),
-    0 6px 18px rgba(23, 58, 64, 0.08);
+    0 20px 40px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(4px);
 }
 
-.feature-card {
-  background: linear-gradient(165deg, color-mix(in oklab, var(--surface-strong) 93%, white 7%), var(--surface));
-  box-shadow:
-    0 1px 0 var(--inset-glint) inset,
-    0 18px 34px rgba(30, 90, 72, 0.1),
-    0 4px 14px rgba(23, 58, 64, 0.06);
+.surf-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.9);
 }
 
-.feature-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--lagoon-deep) 35%, var(--line));
-}
-
-button,
-.island-shell,
-a {
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
-    transform 180ms ease;
-}
-
-.island-kicker {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.69rem;
-  color: var(--kicker);
-}
-
-.nav-link {
+.texture-noise {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  text-decoration: none;
-  color: var(--sea-ink-soft);
 }
 
-.nav-link::after {
+.texture-noise::after {
   content: "";
   position: absolute;
-  left: 0;
-  bottom: -6px;
-  width: 100%;
-  height: 2px;
-  transform: scaleX(0);
-  transform-origin: left;
-  background: linear-gradient(90deg, var(--lagoon), #7ed3bf);
-  transition: transform 170ms ease;
-}
-
-.nav-link:hover,
-.nav-link.is-active {
-  color: var(--sea-ink);
-}
-
-.nav-link:hover::after,
-.nav-link.is-active::after {
-  transform: scaleX(1);
-}
-
-@media (max-width: 640px) {
-  .nav-link::after {
-    bottom: -4px;
-  }
-}
-
-.site-footer {
-  border-top: 1px solid var(--line);
-  background: color-mix(in oklab, var(--header-bg) 84%, transparent 16%);
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='1' height='1' fill='rgba(255,255,255,0.22)'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
 .rise-in {
-  animation: rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rise-in 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.wave-fade {
+  animation: wave-fade 20s linear infinite;
+}
+
+@keyframes wave-fade {
+  0% {
+    transform: translateX(-10%);
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(10%);
+    opacity: 0.45;
   }
 }

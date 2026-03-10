@@ -1,24 +1,30 @@
-import { useState } from 'react'
-import { Users } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Users, AlertTriangle } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
-import type { AppUser } from '#/types'
+import type { AppUser, PairPolicy } from '#/types'
 import { snakeDraft, type Pair } from './algorithms'
+import { validatePairForPolicy } from '#/lib/utils'
 
 interface PairEditorProps {
   players: AppUser[]
   onConfirm: (pairs: Pair[]) => void
   loading?: boolean
+  pairPolicy?: PairPolicy
 }
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-export function PairEditor({ players, onConfirm, loading }: PairEditorProps) {
+export function PairEditor({ players, onConfirm, loading, pairPolicy = 'any' }: PairEditorProps) {
   const [pairs, setPairs] = useState<Pair[]>(() => snakeDraft(players))
   const [selected, setSelected] = useState<{ pairIdx: number; slot: 0 | 1 } | null>(null)
+
+  const invalidPairs = useMemo(() => {
+    return pairs.filter((pair) => !validatePairForPolicy(pair, pairPolicy))
+  }, [pairs, pairPolicy])
 
   function handleSelect(pairIdx: number, slot: 0 | 1) {
     if (selected === null) {
@@ -50,9 +56,15 @@ export function PairEditor({ players, onConfirm, loading }: PairEditorProps) {
         <p className="text-sm text-[var(--sea-ink-soft)] mb-3">
           Toque em dois jogadores de duplas diferentes para trocar.
         </p>
+        {pairPolicy !== 'any' && (
+          <p className="text-xs text-[var(--sea-ink-soft)] mb-2 flex items-center gap-1">
+            <AlertTriangle className="size-3" /> Política ativa: {pairPolicy === 'mixed_duo' ? 'Misto' : 'Unissex'}
+          </p>
+        )}
         <div className="space-y-2">
           {pairs.map((pair, pairIdx) => {
             const mmrAvg = Math.round((pair[0].mmr + pair[1].mmr) / 2)
+            const invalid = !validatePairForPolicy(pair, pairPolicy)
             return (
               <div key={pairIdx} className="island-shell rounded-2xl p-3">
                 <div className="flex items-center justify-between mb-2">
@@ -62,7 +74,7 @@ export function PairEditor({ players, onConfirm, loading }: PairEditorProps) {
                   </span>
                   <Badge variant="secondary" className="text-xs">{mmrAvg} MMR</Badge>
                 </div>
-                <div className="flex gap-2">
+                <div className={`flex gap-2 ${invalid ? 'opacity-70' : ''}`}>
                   {([0, 1] as const).map((slot) => {
                     const player = pair[slot]
                     const active = isSelected(pairIdx, slot)
@@ -93,6 +105,11 @@ export function PairEditor({ players, onConfirm, loading }: PairEditorProps) {
                     )
                   })}
                 </div>
+                {invalid && (
+                  <p className="mt-2 text-xs text-amber-600 font-semibold">
+                    Ajuste esta dupla para respeitar o formato {pairPolicy === 'mixed_duo' ? 'misto' : 'unissex'}.
+                  </p>
+                )}
               </div>
             )
           })}
@@ -102,9 +119,9 @@ export function PairEditor({ players, onConfirm, loading }: PairEditorProps) {
       <Button
         className="w-full"
         onClick={() => onConfirm(pairs)}
-        disabled={loading}
+        disabled={loading || invalidPairs.length > 0}
       >
-        {loading ? 'Iniciando…' : 'Confirmar duplas e começar'}
+        {loading ? 'Iniciando…' : invalidPairs.length > 0 ? 'Ajuste as duplas' : 'Confirmar duplas e começar'}
       </Button>
     </div>
   )

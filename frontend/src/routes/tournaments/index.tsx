@@ -55,52 +55,50 @@ function TournamentsContent() {
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 pb-28 pt-6">
+    <main className="mx-auto max-w-xl px-4 pb-28 pt-6">
       {/* Join by code */}
-      <form onSubmit={handleJoin} className="mb-6 flex gap-2 rise-in">
-        <Input
-          placeholder="Código do torneio (ex: AB3X9Z)"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          maxLength={6}
-          className="font-mono tracking-widest uppercase"
-        />
-        <Button type="submit" disabled={joining || code.length < 6} className="shrink-0 gap-1.5">
-          {joining ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
-          Entrar
-        </Button>
+      <form onSubmit={handleJoin} className="mb-6 rounded-3xl border border-[var(--wave-line)] bg-[color-mix(in_oklab,var(--shell)_86%,transparent)] px-4 py-3 shadow-sm backdrop-blur rise-in">
+        <p className="sport-label text-[11px] text-[var(--text-muted)]">Código do torneio</p>
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Input
+            placeholder="EX: AB3X9Z"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            maxLength={6}
+            className="font-mono tracking-[0.5em] uppercase text-lg"
+          />
+          <Button type="submit" disabled={joining || code.length < 6} className="shrink-0 gap-1.5">
+            {joining ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
+            Entrar
+          </Button>
+        </div>
       </form>
 
-      <div className="mb-6 flex items-center justify-between rise-in">
+      <div className="mb-6 flex items-center justify-between gap-3 rise-in">
         <div>
-          <h1 className="display-title text-2xl font-bold text-[var(--sea-ink)]">Torneios</h1>
-          <p className="text-sm text-[var(--sea-ink-soft)]">Histórico de campeonatos</p>
+          <p className="sport-label text-xs text-[var(--text-muted)]">Histórico de campeonatos</p>
+          <h1 className="display-title text-3xl font-bold text-[var(--text-heading)]">Torneios</h1>
         </div>
         <Link to="/tournaments/new">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded-xl bg-[var(--lagoon-deep)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--lagoon)] active:scale-95 transition-all cursor-pointer"
-          >
+          <Button className="gap-1.5 rounded-2xl bg-[var(--cta-primary)] px-6 text-base hover:bg-[var(--cta-primary-dark)]">
             <Plus className="size-4" />
             Novo
-          </button>
+          </Button>
         </Link>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+            <Skeleton key={i} className="h-24 w-full rounded-3xl" />
           ))}
         </div>
       ) : tournaments.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-[var(--sea-ink-soft)]">
-          <Trophy className="size-12 opacity-40" />
+        <div className="surf-card texture-noise flex flex-col items-center gap-3 rounded-3xl px-6 py-16 text-center text-[var(--text-muted)]">
+          <Trophy className="size-12 text-[var(--cta-primary)]" />
           <p className="text-sm">Nenhum torneio ainda.</p>
-          <Link to="/tournaments/new">
-            <span className="text-sm font-semibold text-[var(--lagoon-deep)] underline underline-offset-4 cursor-pointer">
-              Criar primeiro torneio
-            </span>
+          <Link to="/tournaments/new" className="text-sm font-semibold text-[var(--cta-primary)] underline underline-offset-4">
+            Criar primeiro torneio
           </Link>
         </div>
       ) : (

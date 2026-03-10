@@ -15,14 +15,29 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
-import type { AppUser, Tournament } from '#/types'
-import { generateRoundRobin } from './algorithms'
+import type { AppUser, Tournament, TournamentCategory, TournamentFormat } from '#/types'
+import { buildGroupStage, generateRoundRobin } from './algorithms'
+import { DEFAULT_TOURNAMENT_CATEGORY, DEFAULT_TOURNAMENT_FORMAT, getPairPolicy, validatePairForPolicy } from '#/lib/utils'
 
 function generateJoinCode(): string {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
 }
 
-export async function createTournamentLobby(createdBy: string, isRoundTrip = false, name = 'Torneio do Dia'): Promise<string> {
+interface CreateTournamentOptions {
+  name?: string
+  isRoundTrip?: boolean
+  format?: TournamentFormat
+  category?: TournamentCategory
+  groupCount?: number
+  advancePerGroup?: number
+}
+
+export async function createTournamentLobby(
+  createdBy: string,
+  { name = 'Torneio do Dia', isRoundTrip = false, format = DEFAULT_TOURNAMENT_FORMAT, category = DEFAULT_TOURNAMENT_CATEGORY, groupCount = 2, advancePerGroup = 2 }: CreateTournamentOptions = {},
+): Promise<string> {
+  const pairPolicy = getPairPolicy(category)
+  const bracketSize = Math.max(advancePerGroup * groupCount, 0)
   const tournamentRef = doc(collection(db, 'tournaments'))
   const tournamentData: Omit<Tournament, 'id'> = {
     name,
@@ -33,6 +48,13 @@ export async function createTournamentLobby(createdBy: string, isRoundTrip = fal
     participants: [createdBy],
     winnerTeam: null,
     isRoundTrip,
+    format,
+    category,
+    pairPolicy,
+    groupCount: format === 'classic' ? groupCount : undefined,
+    advancePerGroup: format === 'classic' ? advancePerGroup : undefined,
+    bracketSize: format === 'classic' ? bracketSize : undefined,
+    bracketGenerated: false,
     createdAt: serverTimestamp() as Tournament['createdAt'],
   }
   const batch = writeBatch(db)
@@ -63,19 +85,45 @@ export async function joinTournamentByCode(
 export async function startTournament(
   tournamentId: string,
   pairs: [AppUser, AppUser][],
+  options?: { format?: TournamentFormat },
 ): Promise<void> {
   const batch = writeBatch(db)
   const tournamentRef = doc(db, 'tournaments', tournamentId)
 
-  batch.update(tournamentRef, { status: 'in_progress' })
-
   const tournamentSnap = await getDoc(tournamentRef)
   const tournament = { id: tournamentSnap.id, ...tournamentSnap.data() } as Tournament
+  const format = options?.format ?? tournament.format ?? DEFAULT_TOURNAMENT_FORMAT
+  const policy = tournament.pairPolicy ?? getPairPolicy(tournament.category ?? DEFAULT_TOURNAMENT_CATEGORY)
 
-  const matches = generateRoundRobin(pairs, tournamentId, tournament.isRoundTrip)
-  for (const match of matches) {
-    const matchRef = doc(collection(db, 'matches'))
-    batch.set(matchRef, match)
+  const invalidPair = pairs.find((pair) => !validatePairForPolicy(pair, policy))
+  if (invalidPair) {
+    throw new Error('Há duplas que não respeitam a categoria escolhida. Ajuste antes de iniciar.')
+  }
+
+  batch.update(tournamentRef, { status: 'in_progress', format })
+
+  if (format === 'round_robin') {
+    const matches = generateRoundRobin(pairs, {
+      tournamentId,
+      isRoundTrip: tournament.isRoundTrip,
+      stage: 'group',
+    })
+    for (const match of matches) {
+      const matchRef = doc(collection(db, 'matches'))
+      batch.set(matchRef, match)
+    }
+  } else {
+    const groupCount = tournament.groupCount ?? 2
+    const { groups, matches } = buildGroupStage(pairs, {
+      tournamentId,
+      groupCount,
+      isRoundTrip: false,
+    })
+    batch.update(tournamentRef, { groups })
+    for (const match of matches) {
+      const matchRef = doc(collection(db, 'matches'))
+      batch.set(matchRef, match)
+    }
   }
 
   await batch.commit()

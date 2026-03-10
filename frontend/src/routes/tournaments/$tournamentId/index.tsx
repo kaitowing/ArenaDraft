@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ChevronLeft, Check, Copy, Swords, Trophy } from 'lucide-react'
+import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3 } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useTournament, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
 import { forceCompleteTournament, cancelTournament, startTournament } from '#/features/tournaments/tournamentService'
@@ -12,10 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
-import type { AppUser, Match } from '#/types'
+import type { AppUser, Match, Tournament } from '#/types'
 import type { Pair } from '#/features/tournaments/algorithms'
 
 export const Route = createFileRoute('/tournaments/$tournamentId/')({
@@ -34,14 +35,26 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
-function PlayerChip({ player }: { player: AppUser }) {
-  return (
-    <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--sea-ink)]">
-      <Avatar className="h-6 w-6">
+function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left' | 'right' }) {
+  const content = (
+    <>
+      <Avatar className="h-7 w-7 border border-white/60 shadow-sm">
         <AvatarImage src={player.photoURL ?? undefined} />
         <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
       </Avatar>
-      {player.displayName}
+      <span className="truncate text-sm font-semibold text-[var(--text-heading)]">
+        {player.displayName}
+      </span>
+    </>
+  )
+
+  return (
+    <span
+      className={`flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--shell)_85%,transparent)] px-2 py-1 ${
+        align === 'right' ? 'flex-row-reverse text-right' : ''
+      }`}
+    >
+      {content}
     </span>
   )
 }
@@ -53,63 +66,69 @@ function MatchCard({ match, players }: { match: Match; players: AppUser[] }) {
   const bWon = finished && (match.teamB.score ?? 0) > (match.teamA.score ?? 0)
 
   const inner = (
-    <div className={`island-shell rounded-2xl p-4 transition-all ${finished ? 'opacity-70' : 'hover:shadow-lg active:scale-[0.98] cursor-pointer'}`}>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="island-kicker text-xs">Rodada {match.round}</span>
-        <Badge variant={finished ? 'success' : 'secondary'}>
+    <div
+      className={`surf-card texture-noise rounded-3xl p-4 transition-all ${
+        finished ? 'opacity-95' : 'hover:shadow-lg active:scale-[0.98] cursor-pointer'
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between text-xs text-[var(--text-muted)]">
+        <span className="sport-label text-[11px]">
+          {match.stage === 'playoff' && match.bracketRound
+            ? (BRACKET_ROUND_LABELS[match.bracketRound] ?? match.bracketRound)
+            : `Rodada ${match.round}`}
+        </span>
+        <Badge className={finished ? 'bg-[var(--palm)]/15 text-[var(--palm)]' : 'bg-[var(--cta-primary)]/15 text-[var(--cta-primary)]'}>
           {finished ? 'Finalizado' : 'Pendente'}
         </Badge>
       </div>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <div className={`flex flex-col gap-1 min-w-0 ${aWon ? 'font-bold' : ''}`}>
+        <div className={`flex flex-col gap-2 min-w-0 ${aWon ? 'scale-[1.02]' : 'opacity-90'}`}>
           {match.teamA.playerIds.map((uid) => {
             const p = getPlayer(uid)
-            return p ? <PlayerChip key={uid} player={p} /> : <span key={uid} className="text-xs text-[var(--sea-ink-soft)]">{uid.slice(0, 6)}</span>
+            return p ? (
+              <PlayerChip key={uid} player={p} />
+            ) : (
+              <span key={uid} className="text-xs text-[var(--text-muted)]">
+                {uid.slice(0, 6)}
+              </span>
+            )
           })}
         </div>
         <div className="shrink-0 text-center">
           {finished ? (
-            <div className="flex flex-col items-center gap-0.5">
-              {match.scoringFormat === 'sets' ? (
-                <>
-                  <span className="text-xl font-bold tabular-nums text-[var(--sea-ink)]">
-                    {match.teamA.score}–{match.teamB.score}
-                  </span>
-                  <span className="text-[10px] text-[var(--sea-ink-soft)]">sets</span>
-                </>
-              ) : (
-                <span className="text-xl font-bold tabular-nums text-[var(--sea-ink)]">
-                  {match.teamA.score} – {match.teamB.score}
-                </span>
-              )}
+            <div className="flex flex-col items-center gap-0.5 rounded-2xl bg-[var(--shell)] px-3 py-2">
+              <span className="text-2xl font-black tabular-nums text-[var(--text-heading)]">
+                {match.teamA.score} – {match.teamB.score}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.3em] text-[var(--text-muted)]">
+                {match.scoringFormat === 'sets' ? 'SETS' : 'PLACAR'}
+              </span>
             </div>
           ) : (
-            <Swords className="size-5 text-[var(--sea-ink-soft)]" />
+            <div className="rounded-full bg-[var(--shell)] px-3 py-1 text-[var(--text-muted)]">
+              <Swords className="size-5" />
+            </div>
           )}
         </div>
-        <div className={`flex flex-col items-end gap-1 min-w-0 ${bWon ? 'font-bold' : ''}`}>
+        <div className={`flex flex-col gap-2 min-w-0 items-end ${bWon ? 'scale-[1.02]' : 'opacity-90'}`}>
           {match.teamB.playerIds.map((uid) => {
             const p = getPlayer(uid)
             return p ? (
-              <span
-                key={uid}
-                className="flex flex-row-reverse items-center gap-1.5 text-sm font-medium text-[var(--sea-ink)]"
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={p.photoURL ?? undefined} />
-                  <AvatarFallback className="text-[10px]">{getInitials(p.displayName)}</AvatarFallback>
-                </Avatar>
-                <span className="truncate text-right">{p.displayName}</span>
+              <PlayerChip key={uid} player={p} align="right" />
+            ) : (
+              <span key={uid} className="text-xs text-[var(--text-muted)]">
+                {uid.slice(0, 6)}
               </span>
-            ) : <span key={uid} className="text-xs text-[var(--sea-ink-soft)]">{uid.slice(0, 6)}</span>
+            )
           })}
         </div>
       </div>
 
       {!finished && (
-        <div className="mt-3 border-t border-[var(--line)] pt-3">
-          <span className="text-xs font-semibold text-[var(--lagoon-deep)]">Registrar placar →</span>
+        <div className="mt-3 flex items-center justify-between rounded-2xl bg-[var(--shell)]/60 px-3 py-2 text-xs font-semibold text-[var(--cta-primary)]">
+          Registrar placar
+          <span aria-hidden="true">→</span>
         </div>
       )}
     </div>
@@ -155,41 +174,120 @@ function StandingsCard({ matches, players }: { matches: Match[]; players: AppUse
   const sorted = players.slice().sort((a, b) => (stats.get(b.uid)?.pts ?? 0) - (stats.get(a.uid)?.pts ?? 0))
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Trophy className="size-4 text-[var(--lagoon-deep)]" />
-          Classificação
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ul className="divide-y divide-[var(--line)]">
-          {sorted.map((player, idx) => {
-            const s = stats.get(player.uid) ?? { wins: 0, losses: 0, pts: 0 }
-            return (
-              <li key={player.uid} className="flex items-center gap-3 px-6 py-2.5">
-                <span className="w-5 text-center text-xs font-bold text-[var(--sea-ink-soft)]">
-                  {idx + 1}
-                </span>
-                <Avatar className="h-7 w-7">
-                  <AvatarImage src={player.photoURL ?? undefined} />
-                  <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
-                </Avatar>
-                <p className="flex-1 truncate text-sm font-medium text-[var(--sea-ink)]">
-                  {player.displayName}
-                </p>
-                <span className="text-xs text-[var(--sea-ink-soft)]">
-                  {s.wins}V {s.losses}D
-                </span>
-                <Badge variant="default" className="tabular-nums">
-                  {s.pts} pts
-                </Badge>
-              </li>
-            )
-          })}
-        </ul>
-      </CardContent>
-    </Card>
+    <div className="surf-card texture-noise rounded-3xl p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <div className="rounded-full bg-[var(--cta-primary)]/15 p-2 text-[var(--cta-primary)]">
+          <Trophy className="size-4" />
+        </div>
+        <div>
+          <p className="sport-label text-[11px] text-[var(--text-muted)]">Classificação</p>
+          <h3 className="text-xl font-bold text-[var(--text-heading)]">Quadro geral</h3>
+        </div>
+      </div>
+      <ul className="divide-y divide-[var(--wave-line)]">
+        {sorted.map((player, idx) => {
+          const s = stats.get(player.uid) ?? { wins: 0, losses: 0, pts: 0 }
+          return (
+            <li key={player.uid} className="flex items-center gap-3 px-1 py-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--shell)_80%,transparent)] text-sm font-bold text-[var(--text-heading)]">
+                {idx + 1}
+              </span>
+              <Avatar className="h-8 w-8 border border-white/60 shadow">
+                <AvatarImage src={player.photoURL ?? undefined} />
+                <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--text-heading)]">{player.displayName}</p>
+                <p className="text-[11px] text-[var(--text-muted)]">{s.wins}V · {s.losses}D</p>
+              </div>
+              <span className="rounded-full bg-[var(--shell)] px-3 py-1 text-xs font-semibold text-[var(--text-heading)] tabular-nums">
+                {s.pts} pts
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function GroupsTab({ tournament, players }: { tournament: Tournament; players: AppUser[] }) {
+  if (!tournament.groups?.length) {
+    return (
+      <p className="text-center text-sm text-[var(--text-muted)] py-8">Grupos não disponíveis.</p>
+    )
+  }
+  return (
+    <div className="space-y-4">
+      {tournament.groups.map((group) => (
+        <div key={group.id} className="surf-card texture-noise rounded-3xl p-4">
+          <p className="island-kicker text-xs mb-3">Grupo {group.id}</p>
+          <ul className="divide-y divide-[var(--wave-line)]">
+            {[...group.teams]
+              .sort((a, b) => b.wins - a.wins || a.losses - b.losses || b.points - a.points)
+              .map((team, idx) => {
+                const p1 = players.find((p) => p.uid === team.playerIds[0])
+                const p2 = players.find((p) => p.uid === team.playerIds[1])
+                return (
+                  <li key={team.teamId ?? idx} className="flex items-center gap-3 px-1 py-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--shell)] text-xs font-bold text-[var(--text-heading)]">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--text-heading)]">
+                        {p1?.displayName ?? '?'} &amp; {p2?.displayName ?? '?'}
+                      </p>
+                    </div>
+                    <span className="text-xs text-[var(--text-muted)]">{team.wins}V {team.losses}D</span>
+                    <span className="rounded-full bg-[var(--shell)] px-2.5 py-1 text-xs font-bold tabular-nums">
+                      {team.points} pts
+                    </span>
+                  </li>
+                )
+              })}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const BRACKET_ROUND_LABELS: Record<string, string> = {
+  R16: 'Oitavas',
+  QF: 'Quartas de final',
+  SF: 'Semifinal',
+  F: 'Final',
+}
+
+function BracketTab({ matches, players }: { matches: Match[]; players: AppUser[] }) {
+  const playoffMatches = matches.filter((m) => m.stage === 'playoff')
+  if (!playoffMatches.length) {
+    return (
+      <div className="surf-card texture-noise rounded-3xl px-5 py-8 text-center">
+        <Swords className="mx-auto mb-3 size-8 text-[var(--text-muted)]" />
+        <p className="text-sm font-semibold text-[var(--text-heading)]">Eliminatórias ainda não iniciadas</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">Conclua a fase de grupos para gerar o bracket.</p>
+      </div>
+    )
+  }
+  const roundOrder = ['R16', 'QF', 'SF', 'F']
+  return (
+    <div className="space-y-4">
+      {roundOrder.map((round) => {
+        const roundMatches = playoffMatches.filter((m) => m.bracketRound === round)
+        if (!roundMatches.length) return null
+        return (
+          <div key={round}>
+            <p className="island-kicker text-xs mb-2">{BRACKET_ROUND_LABELS[round] ?? round}</p>
+            <div className="space-y-2">
+              {roundMatches.map((match) => (
+                <MatchCard key={match.id} match={match} players={players} />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -197,7 +295,7 @@ function LobbyView({
   tournament,
   players,
 }: {
-  tournament: import('#/types').Tournament
+  tournament: Tournament
   players: AppUser[]
 }) {
   const { user } = useAuth()
@@ -210,6 +308,7 @@ function LobbyView({
 
   const isOwner = user?.uid === tournament.createdBy
   const canStart = players.length >= 4 && players.length % 2 === 0
+  const organizerPlayer = players.find((p) => p.uid === tournament.createdBy)
 
   async function copyCode() {
     await navigator.clipboard.writeText(tournament.joinCode)
@@ -253,26 +352,38 @@ function LobbyView({
           Voltar ao lobby
         </button>
         <h2 className="display-title text-xl font-bold text-[var(--sea-ink)]">Definir duplas</h2>
-        <PairEditor players={players} onConfirm={handleStart} loading={starting} />
+        <PairEditor players={players} onConfirm={handleStart} loading={starting} pairPolicy={tournament.pairPolicy} />
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="island-shell rounded-2xl p-5 text-center">
-        <p className="island-kicker text-xs mb-2">Código do torneio</p>
-        <p className="display-title text-4xl font-bold tracking-widest text-[var(--lagoon-deep)] mb-3">
-          {tournament.joinCode}
-        </p>
-        <Button variant="outline" size="sm" onClick={copyCode} className="gap-1.5">
-          {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-          {copied ? 'Copiado!' : 'Copiar código'}
-        </Button>
-        <p className="mt-3 text-xs text-[var(--sea-ink-soft)]">
-          Compartilhe com os jogadores para eles entrarem no torneio.
-        </p>
-      </div>
+      {isOwner ? (
+        <div className="surf-card texture-noise rounded-3xl p-5 text-center">
+          <p className="sport-label text-[11px] text-[var(--text-muted)] mb-2">Código do torneio</p>
+          <p className="display-title text-4xl font-bold tracking-[0.35em] text-[var(--cta-primary)] mb-3">
+            {tournament.joinCode}
+          </p>
+          <Button variant="outline" size="sm" onClick={copyCode} className="gap-1.5">
+            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            {copied ? 'Copiado!' : 'Copiar código'}
+          </Button>
+          <p className="mt-3 text-xs text-[var(--text-muted)]">
+            Compartilhe com os jogadores para eles entrarem no torneio.
+          </p>
+        </div>
+      ) : (
+        <div className="surf-card texture-noise rounded-3xl p-5 text-center">
+          <p className="sport-label text-[11px] text-[var(--text-muted)] mb-2">Lobby privado</p>
+          <p className="text-lg font-semibold text-[var(--text-heading)]">
+            Somente o organizador vê o código deste torneio.
+          </p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Peça o código para {organizerPlayer?.displayName ?? 'o organizador'} para participar.
+          </p>
+        </div>
+      )}
 
       <div>
         <p className="island-kicker text-xs mb-3">
@@ -329,10 +440,10 @@ function LobbyView({
       
       {/* Cancel Tournament Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent>
+        <DialogContent className="bg-white/95 text-[var(--sea-ink)] backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="text-red-600">Cancelar torneio</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base font-semibold text-red-600">Cancelar torneio</DialogTitle>
+            <DialogDescription className="text-sm text-[var(--sea-ink-soft)]">
               Tem certeza que deseja cancelar o torneio <strong>"{tournament.name}"</strong>? 
               Esta ação não pode ser desfeita e todos os jogadores serão removidos do lobby.
             </DialogDescription>
@@ -362,12 +473,16 @@ function LobbyView({
 
 function TournamentContent() {
   const { tournamentId } = Route.useParams()
+  const { user, loading: authLoading } = useAuth()
   const { data: tournament, isLoading: tLoading, error: tError } = useTournament(tournamentId)
-  const { data: matches = [], isLoading: mLoading, error: mError } = useMatches(tournamentId)
+  const isParticipant = Boolean(user && tournament?.participants?.includes(user.uid))
+  const canLoadMatches = Boolean(tournament && tournament.status !== 'waiting' && isParticipant)
+  const { data: matches = [], isLoading: mLoading, error: mError } = useMatches(tournamentId, {
+    enabled: canLoadMatches,
+  })
   const { data: players = [], isLoading: pLoading, error: pError } = useTournamentPlayers(
     tournament?.participants ?? [],
   )
-  const { user } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -377,6 +492,12 @@ function TournamentContent() {
   const finishedMatches = matches.filter((m) => m.status === 'finished').length
   const isOrganizer = user && tournament?.createdBy === user.uid
   const canForceComplete = tournament?.status === 'in_progress' && isOrganizer
+  const showRestrictedNotice = Boolean(
+    tournament &&
+      tournament.status !== 'waiting' &&
+      !canLoadMatches &&
+      !authLoading,
+  )
 
   async function handleForceComplete() {
     if (!tournament) return
@@ -441,6 +562,19 @@ function TournamentContent() {
             <p className="text-sm text-[var(--sea-ink-soft)]">
               {new Date(tournament.date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {tournament.format === 'classic' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                  <Swords className="size-2.5" /> Clássico
+                </span>
+              )}
+              {tournament.category === 'mixed' && (
+                <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">Misto</span>
+              )}
+              {tournament.category === 'unisex' && (
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">Unissex</span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2">
             {tournament.status === 'waiting' ? (
@@ -470,23 +604,68 @@ function TournamentContent() {
         </div>
       ) : (
         <div className="space-y-4">
-          {players.length > 0 && (
-            <div className="rise-in" style={{ animationDelay: '60ms' }}>
-              <StandingsCard matches={matches} players={players} />
+          {showRestrictedNotice ? (
+            <div className="surf-card texture-noise rounded-3xl px-5 py-6 text-center text-sm text-[var(--text-muted)]">
+              Partidas e classificação ficam visíveis somente para jogadores participantes após o
+              início do torneio.
             </div>
-          )}
-          {roundNumbers.map((round, ri) => (
-            <div key={round} className="rise-in" style={{ animationDelay: `${(ri + 2) * 60}ms` }}>
-              <p className="island-kicker mb-2 px-1">Rodada {round}</p>
-              <div className="space-y-2">
-                {matches
-                  .filter((m) => m.round === round)
-                  .map((match) => (
-                    <MatchCard key={match.id} match={match} players={players} />
+          ) : tournament.format === 'classic' ? (
+            <Tabs defaultValue="groups" className="w-full">
+              <TabsList className="w-full mb-4">
+                <TabsTrigger value="groups" className="flex-1 gap-1">
+                  <Layers className="size-3.5" /> Grupos
+                </TabsTrigger>
+                <TabsTrigger value="bracket" className="flex-1 gap-1">
+                  <Swords className="size-3.5" /> Eliminatórias
+                </TabsTrigger>
+                <TabsTrigger value="all" className="flex-1 gap-1">
+                  <Grid3x3 className="size-3.5" /> Partidas
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="groups">
+                <GroupsTab tournament={tournament} players={players} />
+              </TabsContent>
+              <TabsContent value="bracket">
+                <BracketTab matches={matches} players={players} />
+              </TabsContent>
+              <TabsContent value="all">
+                <div className="space-y-4">
+                  {roundNumbers.map((round, ri) => (
+                    <div key={round} className="rise-in" style={{ animationDelay: `${ri * 60}ms` }}>
+                      <p className="island-kicker mb-2 px-1">Rodada {round}</p>
+                      <div className="space-y-2">
+                        {matches
+                          .filter((m) => m.round === round)
+                          .map((match) => (
+                            <MatchCard key={match.id} match={match} players={players} />
+                          ))}
+                      </div>
+                    </div>
                   ))}
-              </div>
-            </div>
-          ))}
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <>
+              {players.length > 0 && (
+                <div className="rise-in" style={{ animationDelay: '60ms' }}>
+                  <StandingsCard matches={matches} players={players} />
+                </div>
+              )}
+              {roundNumbers.map((round, ri) => (
+                <div key={round} className="rise-in" style={{ animationDelay: `${(ri + 2) * 60}ms` }}>
+                  <p className="island-kicker mb-2 px-1">Rodada {round}</p>
+                  <div className="space-y-2">
+                    {matches
+                      .filter((m) => m.round === round)
+                      .map((match) => (
+                        <MatchCard key={match.id} match={match} players={players} />
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
     </main>

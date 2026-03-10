@@ -3,7 +3,8 @@ import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firesto
 import { db } from '#/lib/firebase'
 import type { Match } from '#/types'
 
-export function useMatches(tournamentId: string) {
+export function useMatches(tournamentId: string, options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true
   return useQuery({
     queryKey: ['matches', tournamentId],
     queryFn: async () => {
@@ -13,7 +14,7 @@ export function useMatches(tournamentId: string) {
         .map((d) => ({ id: d.id, ...d.data() }) as Match)
         .sort((a, b) => a.round - b.round)
     },
-    enabled: !!tournamentId,
+    enabled: !!tournamentId && enabled,
   })
 }
 

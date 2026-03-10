@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Save, Trophy, Target, MapPin } from 'lucide-react'
+import { ArrowLeft, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
 import { useCities } from '#/features/tournaments/tournamentQueries'
@@ -13,7 +13,7 @@ import { useToast } from '#/hooks/useToast'
 import { useQuery } from '@tanstack/react-query'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
-import type { AppUser } from '#/types'
+import type { AppUser, Gender } from '#/types'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -36,6 +36,24 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
+function genderLabel(gender: Gender) {
+  switch (gender) {
+    case 'male':
+      return 'Masculino'
+    case 'female':
+      return 'Feminino'
+  }
+}
+
+function genderIcon(gender: Gender) {
+  switch (gender) {
+    case 'male':
+      return <Mars className="size-3.5" />
+    case 'female':
+      return <Venus className="size-3.5" />
+  }
+}
+
 function ProfileContent() {
   const { user: firebaseUser } = useAuth()
   const { toast } = useToast()
@@ -55,11 +73,13 @@ function ProfileContent() {
   const [saving, setSaving] = useState(false)
   const [displayName, setDisplayName] = useState(appUser?.displayName || firebaseUser?.displayName || '')
   const [selectedCities, setSelectedCities] = useState<string[]>(appUser?.cities || [])
+  const [gender, setGender] = useState<Gender | null>(appUser?.gender ?? null)
 
   useEffect(() => {
     if (appUser) {
       setDisplayName(appUser.displayName || firebaseUser?.displayName || '')
       setSelectedCities(appUser.cities || [])
+      setGender(appUser.gender ?? null)
     }
   }, [appUser, firebaseUser])
 
@@ -108,7 +128,7 @@ function ProfileContent() {
 
     setSaving(true)
     try {
-      await updateUserProfile(firebaseUser.uid, { displayName: name, cities: selectedCities })
+      await updateUserProfile(firebaseUser.uid, { displayName: name, cities: selectedCities, gender })
       toast({ title: 'Perfil atualizado!' })
       // Force page reload to get updated user data
       window.location.reload()
@@ -152,6 +172,12 @@ function ProfileContent() {
                 <p className="text-sm text-[var(--sea-ink-soft)]">
                   MMR: {appUser.mmr}
                 </p>
+                {gender && (
+                  <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--surface)] px-3 py-1 text-xs font-semibold text-[var(--sea-ink)]">
+                    {genderIcon(gender)}
+                    {genderLabel(gender)}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -238,6 +264,36 @@ function ProfileContent() {
                   Cidades selecionadas: {selectedCityObjects.map(c => c.name).join(', ')}
                 </p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-[var(--sea-ink)] mb-2 flex items-center gap-2">
+                <Sparkles className="size-4" />
+                Gênero esportivo
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: 'male' as Gender, label: 'Masculino', icon: Mars },
+                  { value: 'female' as Gender, label: 'Feminino', icon: Venus },
+                ]).map(({ value, label, icon: Icon }) => {
+                  const active = gender === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setGender(value)}
+                      className={`flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                        active
+                          ? 'border-[var(--lagoon-deep)] bg-[var(--foam)] text-[var(--lagoon-deep)]'
+                          : 'border-[var(--line)] text-[var(--sea-ink-soft)] hover:border-[var(--lagoon)]'
+                      }`}
+                    >
+                      <Icon className="size-4" />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <Button
