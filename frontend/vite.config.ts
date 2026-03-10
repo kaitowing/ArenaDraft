@@ -14,8 +14,7 @@ const config = defineConfig({
     tailwindcss(),
     tanstackRouter({ target: 'react', autoCodeSplitting: true }),
     viteReact(),
-  ],
-  base: process.env.NODE_ENV === 'production' ? '/ArenaDraft/' : '/',
+  ]
 })
 
 export default config
