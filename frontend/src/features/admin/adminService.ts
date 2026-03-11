@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   increment,
   limit,
@@ -14,7 +15,7 @@ import {
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
-import type { AppUser, Tournament } from '#/types'
+import type { AppUser, Match, Tournament } from '#/types'
 
 // ─── Reopen Tournament ────────────────────────────────────────────────────────
 
@@ -44,6 +45,89 @@ export async function reopenTournament(tournamentId: string): Promise<void> {
       })
     }
   })
+}
+
+// ─── Cancel Tournament (Admin) ───────────────────────────────────────────────
+
+/**
+ * Cancels an in-progress tournament without impacting player metrics.
+ * - Reverts mmr, matchesWon and matchesLost for every finished match that
+ *   has mmrDeltas stored (matches scored after this feature was deployed).
+ * - Deletes all match documents for the tournament.
+ * - Sets tournament status to `cancelled`.
+ * NOTE: requires `allow delete: if isAdmin()` on /matches/{matchId} in
+ * Firestore security rules for match deletion to succeed.
+ */
+export async function adminCancelTournament(tournamentId: string): Promise<void> {
+  const tournamentRef = doc(db, 'tournaments', tournamentId)
+  const tournamentSnap = await getDoc(tournamentRef)
+  if (!tournamentSnap.exists()) throw new Error('Torneio não encontrado.')
+
+  const tournament = { id: tournamentSnap.id, ...tournamentSnap.data() } as Tournament
+  if (tournament.status !== 'in_progress') {
+    throw new Error(`Torneio não está em andamento (status atual: ${tournament.status}).`)
+  }
+
+  const matchesSnap = await getDocs(
+    query(collection(db, 'matches'), where('tournamentId', '==', tournamentId)),
+  )
+  const matches = matchesSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Match)
+
+  // Accumulate per-player reversals across all finished matches
+  const mmrRevertByUid = new Map<string, number>()
+  const winsRevertByUid = new Map<string, number>()
+  const lossesRevertByUid = new Map<string, number>()
+
+  for (const match of matches) {
+    if (match.status !== 'finished' || !match.eloApplied) continue
+
+    if (match.mmrDeltas && match.mmrDeltas.length > 0) {
+      for (const d of match.mmrDeltas) {
+        mmrRevertByUid.set(d.uid, (mmrRevertByUid.get(d.uid) ?? 0) + d.delta)
+      }
+    }
+
+    const scoreA = match.teamA.score ?? 0
+    const scoreB = match.teamB.score ?? 0
+    if (scoreA === scoreB) continue
+    const winnerIds: [string, string] = scoreA > scoreB ? match.teamA.playerIds : match.teamB.playerIds
+    const loserIds: [string, string] = scoreA > scoreB ? match.teamB.playerIds : match.teamA.playerIds
+    for (const uid of winnerIds) {
+      winsRevertByUid.set(uid, (winsRevertByUid.get(uid) ?? 0) + 1)
+    }
+    for (const uid of loserIds) {
+      lossesRevertByUid.set(uid, (lossesRevertByUid.get(uid) ?? 0) + 1)
+    }
+  }
+
+  // Firestore batch limit is 500 ops. Typical tournament well within bounds.
+  const batch = writeBatch(db)
+
+  batch.update(tournamentRef, { status: 'cancelled' })
+
+  for (const match of matches) {
+    batch.delete(doc(db, 'matches', match.id))
+  }
+
+  const affectedUids = new Set([
+    ...mmrRevertByUid.keys(),
+    ...winsRevertByUid.keys(),
+    ...lossesRevertByUid.keys(),
+  ])
+  for (const uid of affectedUids) {
+    const update: Record<string, unknown> = {}
+    const mmrDelta = mmrRevertByUid.get(uid)
+    if (mmrDelta !== undefined) update['mmr'] = increment(-mmrDelta)
+    const wins = winsRevertByUid.get(uid)
+    if (wins !== undefined) update['stats.matchesWon'] = increment(-wins)
+    const losses = lossesRevertByUid.get(uid)
+    if (losses !== undefined) update['stats.matchesLost'] = increment(-losses)
+    if (Object.keys(update).length > 0) {
+      batch.update(doc(db, 'users', uid), update)
+    }
+  }
+
+  await batch.commit()
 }
 
 // ─── Fetch Tournaments (Admin) ────────────────────────────────────────────────

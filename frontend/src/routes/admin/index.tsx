@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import {
   AlertTriangle,
+  Ban,
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -17,6 +18,7 @@ import {
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
 import {
+  adminCancelTournament,
   fetchAdminTournaments,
   migrateUserRoles,
   reopenTournament,
@@ -73,6 +75,7 @@ const STATUS_LABELS: Record<Tournament['status'], string> = {
   draft: 'Rascunho',
   in_progress: 'Em andamento',
   completed: 'Encerrado',
+  cancelled: 'Cancelado',
 }
 
 const STATUS_COLORS: Record<Tournament['status'], string> = {
@@ -80,6 +83,7 @@ const STATUS_COLORS: Record<Tournament['status'], string> = {
   draft: 'bg-gray-100 text-gray-700',
   in_progress: 'bg-blue-100 text-blue-800',
   completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
 }
 
 type StatusFilter = Tournament['status'] | 'all'
@@ -90,6 +94,7 @@ const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'draft', label: 'Rascunho' },
   { value: 'in_progress', label: 'Em andamento' },
   { value: 'completed', label: 'Encerrado' },
+  { value: 'cancelled', label: 'Cancelado' },
 ]
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
@@ -162,6 +167,7 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
   const [searched, setSearched] = useState(false)
 
   const [reopeningId, setReopeningId] = useState<string | null>(null)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   async function handleSearch(append = false) {
@@ -190,6 +196,24 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
       toast({ variant: 'destructive', title: 'Erro ao buscar torneios', description: String(err) })
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleCancel(tournament: Tournament) {
+    setCancellingId(tournament.id)
+    try {
+      await adminCancelTournament(tournament.id)
+      toast({
+        title: 'Torneio cancelado',
+        description: `"${tournament.name}" foi cancelado e as métricas dos jogadores foram revertidas.`,
+      })
+      setTournaments((prev) =>
+        prev.map((t) => (t.id === tournament.id ? { ...t, status: 'cancelled' } : t)),
+      )
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Erro ao cancelar torneio', description: String(err) })
+    } finally {
+      setCancellingId(null)
     }
   }
 
@@ -319,6 +343,8 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
                   }
                   onReopen={() => handleReopen(t)}
                   reopening={reopeningId === t.id}
+                  onCancel={() => handleCancel(t)}
+                  cancelling={cancellingId === t.id}
                 />
               ))}
               {hasMore && (
@@ -352,14 +378,19 @@ function TournamentAdminCard({
   onToggleExpand,
   onReopen,
   reopening,
+  onCancel,
+  cancelling,
 }: {
   tournament: Tournament
   expanded: boolean
   onToggleExpand: () => void
   onReopen: () => void
   reopening: boolean
+  onCancel: () => void
+  cancelling: boolean
 }) {
   const [confirming, setConfirming] = useState(false)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
 
   function handleReopenClick() {
     if (!confirming) {
@@ -368,6 +399,15 @@ function TournamentAdminCard({
     }
     setConfirming(false)
     onReopen()
+  }
+
+  function handleCancelClick() {
+    if (!confirmingCancel) {
+      setConfirmingCancel(true)
+      return
+    }
+    setConfirmingCancel(false)
+    onCancel()
   }
 
   return (
@@ -407,6 +447,58 @@ function TournamentAdminCard({
           </div>
 
           {/* Actions */}
+          {tournament.status === 'in_progress' && (
+            <div className="pt-2">
+              {confirmingCancel ? (
+                <div className="rounded-2xl border border-red-300 bg-red-50 p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-red-800">
+                    <AlertTriangle className="size-4 mt-0.5 shrink-0" />
+                    <p className="text-xs leading-snug">
+                      Isso vai <strong>cancelar o torneio</strong>, reverter o MMR e as
+                      estatísticas de vitórias/derrotas de cada jogador cujas partidas já
+                      foram finalizadas, e <strong>deletar todas as partidas</strong>.
+                      Esta ação não pode ser desfeita. Confirma?
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="gap-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+                      onClick={handleCancelClick}
+                      disabled={cancelling}
+                    >
+                      {cancelling ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Ban className="size-3.5" />
+                      )}
+                      Confirmar cancelamento
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={() => setConfirmingCancel(false)}
+                      disabled={cancelling}
+                    >
+                      Voltar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 rounded-xl border-red-400 text-red-700 hover:bg-red-50"
+                  onClick={handleCancelClick}
+                  disabled={cancelling}
+                >
+                  <Ban className="size-3.5" />
+                  Cancelar torneio
+                </Button>
+              )}
+            </div>
+          )}
           {tournament.status === 'completed' && (
             <div className="pt-2">
               {confirming ? (

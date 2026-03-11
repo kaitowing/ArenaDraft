@@ -46,7 +46,7 @@ export interface Tournament {
   id: string
   name: string
   date: string
-  status: 'waiting' | 'draft' | 'in_progress' | 'completed'
+  status: 'waiting' | 'draft' | 'in_progress' | 'completed' | 'cancelled'
   createdBy: string
   joinCode: string
   participants: string[]
@@ -101,6 +101,7 @@ export interface Match {
   seedA?: number
   seedB?: number
   importanceWeight?: number
+  mmrDeltas?: Array<{ uid: string; delta: number }>
 }
 
 export type MatchResult = 'teamA' | 'teamB' | null

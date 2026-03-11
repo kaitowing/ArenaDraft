@@ -11,6 +11,7 @@ const statusConfig = {
   draft: { label: 'Rascunho', className: 'bg-[var(--shell)] text-[var(--text-muted)]' },
   in_progress: { label: 'Em andamento', className: 'bg-[var(--cta-primary)]/15 text-[var(--cta-primary)]' },
   completed: { label: 'Finalizado', className: 'bg-[var(--palm)]/15 text-[var(--palm)]' },
+  cancelled: { label: 'Cancelado', className: 'bg-red-100 text-red-700' },
 }
 
 export function TournamentCard({ tournament }: TournamentCardProps) {

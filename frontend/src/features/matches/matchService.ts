@@ -154,6 +154,14 @@ export async function updateMatchScore(
 
     const winnerUids = teamAWon ? [p1.uid, p2.uid] : [p3.uid, p4.uid]
 
+    const isFinalMatch = match.stage === 'playoff' && match.bracketRound === 'F'
+
+    const mmrDeltas: Array<{ uid: string; delta: number }> = deltas.map((d) => {
+      const isWinner = winnerUids.includes(d.uid)
+      const bonus = isFinalMatch ? (isWinner ? 24 : 12) : 0
+      return { uid: d.uid, delta: d.delta + bonus }
+    })
+
     const matchUpdate: Record<string, unknown> = {
       'teamA.score': scoreA,
       'teamB.score': scoreB,
@@ -162,6 +170,7 @@ export async function updateMatchScore(
       submittedBy,
       eloApplied: true,
       timestamp: serverTimestamp(),
+      mmrDeltas,
     }
     if (setsA) matchUpdate['teamA.sets'] = setsA
     if (setsB) matchUpdate['teamB.sets'] = setsB
@@ -171,11 +180,7 @@ export async function updateMatchScore(
     for (const delta of deltas) {
       const player = players.find((p) => p.uid === delta.uid)!
       const isWinner = winnerUids.includes(delta.uid)
-      const bonus = match.stage === 'playoff' && match.bracketRound === 'F'
-        ? isWinner
-          ? 24
-          : 12
-        : 0
+      const bonus = isFinalMatch ? (isWinner ? 24 : 12) : 0
       tx.update(doc(db, 'users', delta.uid), {
         mmr: delta.newMMR + bonus,
         'stats.matchesWon': isWinner ? player.stats.matchesWon + 1 : player.stats.matchesWon,

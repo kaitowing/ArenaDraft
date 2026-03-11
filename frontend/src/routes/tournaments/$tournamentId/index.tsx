@@ -46,15 +46,15 @@ function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left
     <Link
       to="/players/$userId"
       params={{ userId: player.uid }}
-      className={`flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--shell)_85%,transparent)] px-2 py-1 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer ${
+      className={`flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--shell)_85%,transparent)] px-2 py-1 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer ${
         align === 'right' ? 'flex-row-reverse text-right' : ''
       }`}
     >
-      <Avatar className="h-7 w-7 border border-white/60 shadow-sm">
+      <Avatar className="h-7 w-7 shrink-0 border border-white/60 shadow-sm">
         <AvatarImage src={player.photoURL ?? undefined} />
         <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
       </Avatar>
-      <span className="truncate text-sm font-semibold text-[var(--text-heading)]">
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-heading)]">
         {player.displayName}
       </span>
     </Link>
