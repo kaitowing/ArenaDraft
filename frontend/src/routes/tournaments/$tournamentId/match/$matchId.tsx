@@ -49,9 +49,9 @@ function TeamDisplay({ playerIds, players }: { playerIds: readonly string[]; pla
       {playerIds.map((uid) => {
         const p = players.find((pl) => pl.uid === uid)
         return (
-          <div key={uid} className="flex items-center gap-2">
+          <div key={uid} className="flex items-center gap-2 min-w-0">
             <UserAvatar uid={uid} displayName={p?.displayName ?? uid.slice(0, 8)} size="sm" />
-            <span className="text-sm font-medium text-[var(--sea-ink)]">
+            <span className="min-w-0 truncate text-sm font-medium text-[var(--sea-ink)]">
               {p?.displayName ?? uid.slice(0, 8)}
             </span>
           </div>
@@ -199,9 +199,9 @@ function MatchContent() {
                 {match.teamB.playerIds.map((uid) => {
                   const p = players.find((pl) => pl.uid === uid)
                   return (
-                    <div key={uid} className="flex flex-row-reverse items-center gap-2">
+                    <div key={uid} className="flex flex-row-reverse items-center gap-2 min-w-0">
                       <UserAvatar uid={uid} displayName={p?.displayName ?? uid.slice(0, 8)} size="sm" />
-                      <span className="text-sm font-medium text-[var(--sea-ink)]">
+                      <span className="min-w-0 truncate text-sm font-medium text-[var(--sea-ink)] text-right">
                         {p?.displayName ?? uid.slice(0, 8)}
                       </span>
                     </div>

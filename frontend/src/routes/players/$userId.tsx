@@ -107,8 +107,8 @@ function PlayerProfileContent() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <UserAvatar uid={player.uid} displayName={player.displayName} size="xl" />
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-[var(--sea-ink)]">
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-xl font-bold text-[var(--sea-ink)]">
                   {player.displayName}
                 </h2>
                 <p className="text-sm text-[var(--sea-ink-soft)]">

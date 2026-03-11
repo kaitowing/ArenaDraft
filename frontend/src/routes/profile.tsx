@@ -218,8 +218,8 @@ function ProfileContent() {
                   onChange={handleFileChange}
                 />
               </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-[var(--sea-ink)]">
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-xl font-bold text-[var(--sea-ink)]">
                   {appUser.displayName}
                 </h2>
                 <p className="text-sm text-[var(--sea-ink-soft)]">

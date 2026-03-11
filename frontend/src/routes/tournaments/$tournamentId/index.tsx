@@ -403,7 +403,7 @@ function LobbyView({
               className="island-shell rounded-xl px-4 py-2.5 flex items-center gap-3 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer"
             >
               <UserAvatar uid={player.uid} displayName={player.displayName} size="sm" />
-              <span className="flex-1 text-sm font-medium text-[var(--sea-ink)]">{player.displayName}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--sea-ink)]">{player.displayName}</span>
               <Badge variant="secondary">{player.mmr} MMR</Badge>
               {player.uid === tournament.createdBy && (
                 <Badge variant="default" className="text-[10px]">Organizador</Badge>
@@ -704,8 +704,8 @@ function TournamentContent() {
               {medalWinners.map(({ medal, player }) => (
                 <div key={`${medal.uid}-${medal.tournamentId}`} className="flex items-center gap-3">
                   <UserAvatar uid={player.uid} displayName={player.displayName} size="md" />
-                  <div className="flex-1">
-                    <p className="font-semibold text-[var(--sea-ink)]">{player.displayName}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[var(--sea-ink)]">{player.displayName}</p>
                     <p className="text-xs text-[var(--sea-ink-soft)]">
                       {medalLabel(medal.id)} · {medal.awardedAt.toDate().toLocaleDateString('pt-BR')}
                     </p>
