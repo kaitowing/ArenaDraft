@@ -5,7 +5,23 @@ const QUALITY_STEP = 0.05
 const MIN_QUALITY = 0.4
 
 export async function compressImageToBase64(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file)
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    throw new Error('O arquivo selecionado não é uma imagem válida.')
+  }
+
+  // Check if file is empty
+  if (file.size === 0) {
+    throw new Error('O arquivo selecionado está vazio.')
+  }
+
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch (err) {
+    console.error('ImageBitmap creation failed:', err)
+    throw new Error('Não foi possível processar esta imagem. Tente outro formato (JPG, PNG).')
+  }
 
   const { width: srcW, height: srcH } = bitmap
   const scale = Math.min(1, MAX_DIMENSION / Math.max(srcW, srcH))
