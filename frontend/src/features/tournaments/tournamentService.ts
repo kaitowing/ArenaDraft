@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
 import type { AppUser, Match, MedalAward, Tournament, TournamentCategory, TournamentFormat } from '#/types'
-import { buildGroupStage, generateRoundRobin } from './algorithms'
+import { buildGroupStage, generateRoundRobin, generateRandomPairsRoundRobin } from './algorithms'
 import { DEFAULT_TOURNAMENT_CATEGORY, DEFAULT_TOURNAMENT_FORMAT, getPairPolicy, validatePairForPolicy } from '#/lib/utils'
 
 function generateJoinCode(): string {
@@ -27,6 +27,7 @@ function generateJoinCode(): string {
 interface CreateTournamentOptions {
   name?: string
   isRoundTrip?: boolean
+  randomPairs?: boolean
   format?: TournamentFormat
   category?: TournamentCategory
   groupCount?: number
@@ -35,7 +36,7 @@ interface CreateTournamentOptions {
 
 export async function createTournamentLobby(
   createdBy: string,
-  { name = 'Torneio do Dia', isRoundTrip = false, format = DEFAULT_TOURNAMENT_FORMAT, category = DEFAULT_TOURNAMENT_CATEGORY, groupCount = 2, advancePerGroup = 2 }: CreateTournamentOptions = {},
+  { name = 'Torneio do Dia', isRoundTrip = false, randomPairs = false, format = DEFAULT_TOURNAMENT_FORMAT, category = DEFAULT_TOURNAMENT_CATEGORY, groupCount = 2, advancePerGroup = 2 }: CreateTournamentOptions = {},
 ): Promise<string> {
   const pairPolicy = getPairPolicy(category)
   const tournamentRef = doc(collection(db, 'tournaments'))
@@ -47,7 +48,8 @@ export async function createTournamentLobby(
     joinCode: generateJoinCode(),
     participants: [createdBy],
     winnerTeam: null,
-    isRoundTrip,
+    isRoundTrip: randomPairs ? false : isRoundTrip,
+    randomPairs,
     format,
     category,
     pairPolicy,
@@ -106,23 +108,40 @@ export async function startTournament(
   const format = options?.format ?? tournament.format ?? DEFAULT_TOURNAMENT_FORMAT
   const policy = tournament.pairPolicy ?? getPairPolicy(tournament.category ?? DEFAULT_TOURNAMENT_CATEGORY)
 
-  const invalidPair = pairs.find((pair) => !validatePairForPolicy(pair, policy))
-  if (invalidPair) {
-    throw new Error('Há duplas que não respeitam a categoria escolhida. Ajuste antes de iniciar.')
+  // In random pairs mode, pairs are derived from all players — skip manual pair validation
+  if (!tournament.randomPairs) {
+    const invalidPair = pairs.find((pair) => !validatePairForPolicy(pair, policy))
+    if (invalidPair) {
+      throw new Error('Há duplas que não respeitam a categoria escolhida. Ajuste antes de iniciar.')
+    }
   }
 
   batch.update(tournamentRef, { status: 'in_progress', format })
 
   if (format === 'round_robin') {
-    const matches = generateRoundRobin(pairs, {
-      tournamentId,
-      isRoundTrip: tournament.isRoundTrip,
-      stage: 'group',
-      importanceWeight: 1,
-    })
-    for (const match of matches) {
-      const matchRef = doc(collection(db, 'matches'))
-      batch.set(matchRef, match)
+    if (tournament.randomPairs) {
+      // Derive the full player list from the pairs argument (all participants flattened)
+      const allPlayers = pairs.flat()
+      const matches = generateRandomPairsRoundRobin(allPlayers, {
+        tournamentId,
+        stage: 'group',
+        importanceWeight: 1,
+      })
+      for (const match of matches) {
+        const matchRef = doc(collection(db, 'matches'))
+        batch.set(matchRef, match)
+      }
+    } else {
+      const matches = generateRoundRobin(pairs, {
+        tournamentId,
+        isRoundTrip: tournament.isRoundTrip,
+        stage: 'group',
+        importanceWeight: 1,
+      })
+      for (const match of matches) {
+        const matchRef = doc(collection(db, 'matches'))
+        batch.set(matchRef, match)
+      }
     }
   } else {
     const maxGroups = Math.max(1, Math.floor(pairs.length / 2))

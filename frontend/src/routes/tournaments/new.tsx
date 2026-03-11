@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Loader2, Trophy, Shuffle, Layers, Swords } from 'lucide-react'
+import { Loader2, Trophy, Shuffle, Layers, Swords, Dices } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { createTournamentLobby } from '#/features/tournaments/tournamentService'
@@ -27,6 +27,7 @@ function NewTournamentContent() {
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
   const [isRoundTrip, setIsRoundTrip] = useState(false)
+  const [randomPairs, setRandomPairs] = useState(false)
   const [tournamentName, setTournamentName] = useState('')
   const [format, setFormat] = useState<TournamentFormat>('round_robin')
   const [category, setCategory] = useState<TournamentCategory>('open')
@@ -41,6 +42,7 @@ function NewTournamentContent() {
       const tournamentId = await createTournamentLobby(user.uid, {
         name,
         isRoundTrip,
+        randomPairs,
         format,
         category,
         groupCount,
@@ -146,24 +148,59 @@ function NewTournamentContent() {
             </div>
           </div>
           {format === 'round_robin' && (
-            <div className="flex items-center justify-between pt-2">
-              <div>
-                <p className="text-sm font-semibold text-[var(--sea-ink)]">Ida e volta</p>
-                <p className="text-xs text-[var(--sea-ink-soft)]">Cada dupla joga duas vezes.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRoundTrip(!isRoundTrip)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  isRoundTrip ? 'bg-[var(--lagoon-deep)]' : 'bg-[var(--sea-ink-soft)]'
-                }`}
-              >
-                <span
-                  className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-                    isRoundTrip ? 'translate-x-5' : 'translate-x-0'
+            <div className="space-y-3 border-t border-dashed border-[var(--line)] pt-4">
+              {/* Random Pairs toggle */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Dices className="size-4 shrink-0 text-[var(--lagoon-deep)]" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--sea-ink)]">Duplas aleatórias</p>
+                    <p className="text-xs text-[var(--sea-ink-soft)]">
+                      A cada rodada as duplas são sorteadas. Ninguém joga com o mesmo parceiro duas vezes.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !randomPairs
+                    setRandomPairs(next)
+                    if (next) setIsRoundTrip(false)
+                  }}
+                  className={`ml-3 relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    randomPairs ? 'bg-[var(--lagoon-deep)]' : 'bg-[var(--sea-ink-soft)]'
                   }`}
-                />
-              </button>
+                >
+                  <span
+                    className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                      randomPairs ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Round-trip toggle — hidden when random pairs is on */}
+              {!randomPairs && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--sea-ink)]">Ida e volta</p>
+                    <p className="text-xs text-[var(--sea-ink-soft)]">Cada dupla joga duas vezes.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsRoundTrip(!isRoundTrip)}
+                    className={`relative h-6 w-11 rounded-full transition-colors ${
+                      isRoundTrip ? 'bg-[var(--lagoon-deep)]' : 'bg-[var(--sea-ink-soft)]'
+                    }`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+                        isRoundTrip ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {format === 'classic' && (

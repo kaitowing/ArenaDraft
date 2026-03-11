@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal } from 'lucide-react'
+import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal, Dices } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useTournamentRealtime, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
 import { forceCompleteTournament, cancelTournament, startTournament } from '#/features/tournaments/tournamentService'
@@ -334,6 +334,15 @@ function LobbyView({
     }
   }
 
+  async function handleStartRandomPairs() {
+    // Build dummy pairs from the full player list — the algorithm will use them as individuals
+    const dummyPairs: Pair[] = []
+    for (let i = 0; i < players.length - 1; i += 2) {
+      dummyPairs.push([players[i], players[i + 1]])
+    }
+    await handleStart(dummyPairs)
+  }
+
   async function handleCancel() {
     try {
       await cancelTournament(tournament.id)
@@ -345,7 +354,7 @@ function LobbyView({
     }
   }
 
-  if (showEditor) {
+  if (showEditor && !tournament.randomPairs) {
     return (
       <div className="space-y-4">
         <button
@@ -425,14 +434,32 @@ function LobbyView({
                 : 'Número de jogadores deve ser par'}
             </p>
           )}
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={!canStart}
-            onClick={() => setShowEditor(true)}
-          >
-            Definir duplas e iniciar
-          </Button>
+          {tournament.randomPairs ? (
+            <Button
+              className="w-full gap-2"
+              size="lg"
+              disabled={!canStart || starting}
+              onClick={() => void handleStartRandomPairs()}
+            >
+              {starting ? (
+                <>Sorteando duplas…</>
+              ) : (
+                <>
+                  <Dices className="size-4" />
+                  Sortear duplas e iniciar
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={!canStart}
+              onClick={() => setShowEditor(true)}
+            >
+              Definir duplas e iniciar
+            </Button>
+          )}
           <Button
             variant="destructive"
             className="w-full"
@@ -580,6 +607,11 @@ function TournamentContent() {
               {tournament.format === 'classic' && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                   <Swords className="size-2.5" /> Clássico
+                </span>
+              )}
+              {tournament.randomPairs && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  <Dices className="size-2.5" /> Duplas aleatórias
                 </span>
               )}
               {tournament.category === 'mixed' && (

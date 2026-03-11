@@ -119,6 +119,101 @@ export function generateRoundRobin(
   return matches
 }
 
+interface RandomPairsRoundRobinOptions {
+  tournamentId: string
+  stage?: MatchStage
+  importanceWeight?: number
+}
+
+/**
+ * Random Pairs Round Robin (1-Factorization algorithm).
+ *
+ * Given n players (n even, n ≥ 4), generates n-1 rounds where:
+ * - Each round forms n/2 pairs (each player is in exactly one pair per round).
+ * - No two players are partners more than once across the entire tournament.
+ * - Within each round, matches are arranged by MMR balance (best vs worst pair).
+ *
+ * When n/2 is odd (e.g. 10, 14 players), one pair per round has no opponent
+ * and gets a bye (folga). The bye rotates across all pairs over the rounds so
+ * no pair rests twice before everyone has rested once.
+ *
+ * Uses the circle method (1-factorization of K_n):
+ * Fix player at index 0 as "pivot". Rotate the remaining n-1 players each round.
+ * In each round, pair pivot with rotating[0], rotating[n-2] with rotating[1], etc.
+ */
+export function generateRandomPairsRoundRobin(
+  players: AppUser[],
+  options: RandomPairsRoundRobinOptions,
+): Omit<Match, 'id'>[] {
+  const { tournamentId, stage, importanceWeight } = options
+  const n = players.length
+
+  // Need at least 4 players and an even count
+  if (n < 4 || n % 2 !== 0) return []
+
+  const matches: Omit<Match, 'id'>[] = []
+  const totalRounds = n - 1
+  const pairsPerRound = n / 2
+  const hasOddPairs = pairsPerRound % 2 !== 0
+
+  // Shuffle players for initial randomness before applying the structured algorithm
+  const shuffled = [...players].sort(() => Math.random() - 0.5)
+
+  const pivot = shuffled[0]
+  const rotating = shuffled.slice(1) // length = n - 1
+
+  for (let round = 0; round < totalRounds; round++) {
+    // Build the pairs for this round using the circle method
+    const roundPlayers = [pivot, ...rotating]
+    const roundPairs: Pair[] = []
+
+    for (let i = 0; i < pairsPerRound; i++) {
+      const playerA = roundPlayers[i]
+      const playerB = roundPlayers[n - 1 - i]
+      roundPairs.push([playerA, playerB])
+    }
+
+    // When the number of pairs is odd, one pair gets a bye this round.
+    // We rotate which pair rests: in round r, the pair at index (r % pairsPerRound)
+    // is removed before creating matches, ensuring every pair rests roughly equally.
+    const activePairs = hasOddPairs
+      ? roundPairs.filter((_, i) => i !== round % pairsPerRound)
+      : roundPairs
+
+    // Sort active pairs by MMR average descending, then match best vs worst.
+    // This balances match quality within the round.
+    const sortedPairs = [...activePairs].sort(
+      (a, b) => pairMmrAverage(b) - pairMmrAverage(a),
+    )
+
+    const half = sortedPairs.length / 2 // always integer now (even number of active pairs)
+    for (let i = 0; i < half; i++) {
+      const teamAPair = sortedPairs[i]
+      const teamBPair = sortedPairs[sortedPairs.length - 1 - i]
+
+      matches.push({
+        tournamentId,
+        round: round + 1,
+        scoringFormat: 'points',
+        teamA: pairToTeam(teamAPair),
+        teamB: pairToTeam(teamBPair),
+        status: 'pending',
+        submittedBy: null,
+        eloApplied: false,
+        timestamp: null,
+        stage,
+        groupId: null,
+        importanceWeight,
+      })
+    }
+
+    // Rotate: move last element of rotating to the front
+    rotating.unshift(rotating.pop()!)
+  }
+
+  return matches
+}
+
 export function distributePairsIntoGroups(pairs: Pair[], groupCount: number): Pair[][] {
   if (groupCount <= 0) return []
   const sorted = [...pairs].sort((a, b) => pairMmrAverage(b) - pairMmrAverage(a))

@@ -52,6 +52,7 @@ export interface Tournament {
   format: TournamentFormat
   category: TournamentCategory
   pairPolicy: PairPolicy
+  randomPairs?: boolean
   groupCount?: number
   advancePerGroup?: number
   bracketSize?: number
