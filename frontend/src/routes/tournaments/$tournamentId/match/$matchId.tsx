@@ -6,10 +6,11 @@ import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useMatchRealtime } from '#/features/matches/matchQueries'
 import { updateMatchScore } from '#/features/matches/matchService'
 import { useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
+import { usePrefetchProfileImages } from '#/features/auth/imageQueries'
 import { ScoreInput } from '#/features/matches/ScoreInput'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
+import { UserAvatar } from '#/components/UserAvatar'
 import { Badge } from '#/components/ui/badge'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
@@ -36,10 +37,6 @@ function matchRoundLabel(match: Match): string {
   return `Rodada ${match.round}`
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
-}
-
 function teamLabel(playerIds: readonly string[], players: AppUser[]) {
   return playerIds
     .map((uid) => players.find((p) => p.uid === uid)?.displayName.split(' ')[0] ?? '…')
@@ -53,10 +50,7 @@ function TeamDisplay({ playerIds, players }: { playerIds: readonly string[]; pla
         const p = players.find((pl) => pl.uid === uid)
         return (
           <div key={uid} className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={p?.photoURL ?? undefined} />
-              <AvatarFallback className="text-xs">{p ? getInitials(p.displayName) : '?'}</AvatarFallback>
-            </Avatar>
+            <UserAvatar uid={uid} displayName={p?.displayName ?? uid.slice(0, 8)} size="sm" />
             <span className="text-sm font-medium text-[var(--sea-ink)]">
               {p?.displayName ?? uid.slice(0, 8)}
             </span>
@@ -78,6 +72,7 @@ function MatchContent() {
   const { data: players = [], isLoading: pLoading } = useTournamentPlayers(
     match ? [...match.teamA.playerIds, ...match.teamB.playerIds] : [],
   )
+  usePrefetchProfileImages(players.map((p) => p.uid))
 
   const [scoringFormat, setScoringFormat] = useState<'points' | 'sets'>('points')
   const [pointsA, setPointsA] = useState(0)
@@ -205,10 +200,7 @@ function MatchContent() {
                   const p = players.find((pl) => pl.uid === uid)
                   return (
                     <div key={uid} className="flex flex-row-reverse items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={p?.photoURL ?? undefined} />
-                        <AvatarFallback className="text-xs">{p ? getInitials(p.displayName) : '?'}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar uid={uid} displayName={p?.displayName ?? uid.slice(0, 8)} size="sm" />
                       <span className="text-sm font-medium text-[var(--sea-ink)]">
                         {p?.displayName ?? uid.slice(0, 8)}
                       </span>

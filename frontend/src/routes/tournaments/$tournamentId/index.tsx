@@ -9,13 +9,14 @@ import { PairEditor } from '#/features/tournaments/PairEditor'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
+import { UserAvatar } from '#/components/UserAvatar'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePrefetchProfileImages } from '#/features/auth/imageQueries'
 import { useTournamentMedals } from '#/features/ranking/rankingQueries'
 import type { AppUser, Match, Tournament, MedalAward } from '#/types'
 import type { Pair } from '#/features/tournaments/algorithms'
@@ -37,10 +38,6 @@ function TournamentPage() {
   )
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
-}
-
 function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left' | 'right' }) {
   return (
     <Link
@@ -50,10 +47,7 @@ function PlayerChip({ player, align = 'left' }: { player: AppUser; align?: 'left
         align === 'right' ? 'flex-row-reverse text-right' : ''
       }`}
     >
-      <Avatar className="h-7 w-7 shrink-0 border border-white/60 shadow-sm">
-        <AvatarImage src={player.photoURL ?? undefined} />
-        <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
-      </Avatar>
+      <UserAvatar uid={player.uid} displayName={player.displayName} size="xs" className="shrink-0 border border-white/60 shadow-sm" />
       <span className="min-w-0 flex-1 truncate text-sm font-semibold text-[var(--text-heading)]">
         {player.displayName}
       </span>
@@ -197,10 +191,7 @@ function StandingsCard({ matches, players }: { matches: Match[]; players: AppUse
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--shell)_80%,transparent)] text-sm font-bold text-[var(--text-heading)]">
                 {idx + 1}
               </span>
-              <Avatar className="h-8 w-8 border border-white/60 shadow">
-                <AvatarImage src={player.photoURL ?? undefined} />
-                <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar uid={player.uid} displayName={player.displayName} size="sm" className="border border-white/60 shadow" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[var(--text-heading)]">{player.displayName}</p>
                 <p className="text-[11px] text-[var(--text-muted)]">{s.wins}V · {s.losses}D</p>
@@ -411,10 +402,7 @@ function LobbyView({
               params={{ userId: player.uid }}
               className="island-shell rounded-xl px-4 py-2.5 flex items-center gap-3 transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_100%,transparent)] cursor-pointer"
             >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={player.photoURL ?? undefined} />
-                <AvatarFallback className="text-[10px]">{getInitials(player.displayName)}</AvatarFallback>
-              </Avatar>
+              <UserAvatar uid={player.uid} displayName={player.displayName} size="sm" />
               <span className="flex-1 text-sm font-medium text-[var(--sea-ink)]">{player.displayName}</span>
               <Badge variant="secondary">{player.mmr} MMR</Badge>
               {player.uid === tournament.createdBy && (
@@ -522,6 +510,7 @@ function TournamentContent() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { data: tournamentMedals = [] } = useTournamentMedals(tournamentId)
+  usePrefetchProfileImages(players.map((p) => p.uid))
 
   const isLoading = tLoading || mLoading || pLoading
   const roundNumbers = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b)
@@ -714,10 +703,7 @@ function TournamentContent() {
             <CardContent className="space-y-3">
               {medalWinners.map(({ medal, player }) => (
                 <div key={`${medal.uid}-${medal.tournamentId}`} className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={player.photoURL ?? undefined} />
-                    <AvatarFallback className="text-sm">{player.displayName.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar uid={player.uid} displayName={player.displayName} size="md" />
                   <div className="flex-1">
                     <p className="font-semibold text-[var(--sea-ink)]">{player.displayName}</p>
                     <p className="text-xs text-[var(--sea-ink-soft)]">

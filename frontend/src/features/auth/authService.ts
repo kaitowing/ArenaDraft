@@ -6,6 +6,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import type { ImageDoc } from '#/types'
 import { auth, db } from '#/lib/firebase'
 import { queryClient } from '#/lib/queryClient'
 import type { Gender } from '#/types'
@@ -72,4 +73,9 @@ export async function updateUserProfile(
   if (updates.displayName && auth.currentUser) {
     await updateProfile(auth.currentUser, { displayName: updates.displayName })
   }
+}
+
+export async function updateProfilePhoto(uid: string, base64: string): Promise<void> {
+  const imageData: ImageDoc = { base64, updatedAt: serverTimestamp() }
+  await setDoc(doc(db, 'images', uid), imageData, { merge: true })
 }

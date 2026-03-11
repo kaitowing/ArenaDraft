@@ -30,6 +30,15 @@ export function validatePairForPolicy(pair: [AppUser, AppUser], policy: PairPoli
   return true
 }
 
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+}
+
 export function chunkIntoGroups<T>(items: T[], groupCount: number): T[][] {
   const groups = Array.from({ length: groupCount }, () => [] as T[])
   for (let i = 0; i < items.length; i++) {

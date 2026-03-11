@@ -1,7 +1,8 @@
 import { Check, UserPlus } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
+import { UserAvatar } from '#/components/UserAvatar'
+import { usePrefetchProfileImages } from '#/features/auth/imageQueries'
 import { cn } from '#/lib/utils'
 import { useTournamentStore } from '#/store/tournamentStore'
 import type { AppUser } from '#/types'
@@ -12,16 +13,8 @@ interface PlayerSelectorProps {
   currentUserId?: string
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-}
-
 export function PlayerSelector({ players, isLoading, currentUserId }: PlayerSelectorProps) {
+  usePrefetchProfileImages(players.map((p) => p.uid))
   const { selectedPlayers, togglePlayer } = useTournamentStore()
   const selectedUids = new Set(selectedPlayers.map((p) => p.uid))
 
@@ -67,10 +60,7 @@ export function PlayerSelector({ players, isLoading, currentUserId }: PlayerSele
                 <Check className="size-3" />
               </span>
             )}
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={player.photoURL ?? undefined} />
-              <AvatarFallback>{getInitials(player.displayName)}</AvatarFallback>
-            </Avatar>
+            <UserAvatar uid={player.uid} displayName={player.displayName} size="md" />
             <div className="min-w-0 w-full">
               <p className="truncate text-sm font-semibold text-[var(--sea-ink)]">
                 {player.displayName}

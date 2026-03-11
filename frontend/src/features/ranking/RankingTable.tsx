@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { Trophy, TrendingUp, Waves, User } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Skeleton } from '#/components/ui/skeleton'
+import { UserAvatar } from '#/components/UserAvatar'
+import { usePrefetchProfileImages } from '#/features/auth/imageQueries'
 import type { AppUser } from '#/types'
 
 const MAX_VISIBLE = 20
@@ -13,15 +14,6 @@ interface RankingTableProps {
   isLoading?: boolean
   searchTerm?: string
   totalPlayers?: number
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
 }
 
 const medalTokens = [
@@ -69,10 +61,7 @@ function PlayerRow({ player, index, isCurrentUser = false }: { player: AppUser; 
         >
           {rank.label}
         </span>
-        <Avatar className="h-11 w-11 shrink-0 border border-white/40 shadow-sm">
-          <AvatarImage src={player.photoURL ?? undefined} alt={player.displayName} />
-          <AvatarFallback>{getInitials(player.displayName)}</AvatarFallback>
-        </Avatar>
+        <UserAvatar uid={player.uid} displayName={player.displayName} size="lg" className="shrink-0 border border-white/40 shadow-sm" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold text-[var(--text-heading)]">
             {player.displayName}
@@ -92,6 +81,9 @@ function PlayerRow({ player, index, isCurrentUser = false }: { player: AppUser; 
 }
 
 export function RankingTable({ players, allPlayers, currentUserId, isLoading, searchTerm = '', totalPlayers }: RankingTableProps) {
+  const allUids = (allPlayers ?? players).map((p) => p.uid)
+  usePrefetchProfileImages(allUids)
+
   if (isLoading) {
     return (
       <div className="surf-card texture-noise rounded-3xl p-5">

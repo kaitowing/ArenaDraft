@@ -1,16 +1,20 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { ArrowLeft, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles, Medal } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ArrowLeft, Camera, Loader2, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles, Medal } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
 import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
 import { useMedals } from '#/features/ranking/rankingQueries'
-import { updateUserProfile } from '#/features/auth/authService'
+import { updateUserProfile, updateProfilePhoto } from '#/features/auth/authService'
+import { useProfileImage } from '#/features/auth/imageQueries'
+import { compressImageToBase64 } from '#/lib/imageUtils'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { useToast } from '#/hooks/useToast'
+import { getInitials } from '#/lib/utils'
 import type { Gender } from '#/types'
 
 export const Route = createFileRoute('/profile')({
@@ -23,15 +27,6 @@ function ProfilePage() {
       <ProfileContent />
     </AuthGuard>
   )
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
 }
 
 function genderLabel(gender: Gender) {
@@ -65,12 +60,17 @@ function medalDescription(id: string) {
 function ProfileContent() {
   const { user: firebaseUser } = useAuth()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const { data: cities = [] } = useCities()
 
   const { data: appUser, isLoading } = useAppUserRealtime(firebaseUser?.uid)
   const { data: medals = [] } = useMedals(firebaseUser?.uid ?? '')
+  const { data: savedPhoto } = useProfileImage(firebaseUser?.uid)
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState(appUser?.displayName || firebaseUser?.displayName || '')
   const [selectedCities, setSelectedCities] = useState<string[]>(appUser?.cities || [])
   const [gender, setGender] = useState<Gender | null>(appUser?.gender ?? null)
@@ -139,6 +139,39 @@ function ProfileContent() {
     }
   }
 
+  const avatarSrc = previewSrc ?? savedPhoto ?? undefined
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !firebaseUser) return
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ variant: 'destructive', title: 'Arquivo muito grande', description: 'Escolha uma imagem menor que 10 MB.' })
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(file)
+    setPreviewSrc(objectUrl)
+
+    setUploadingPhoto(true)
+    try {
+      const base64 = await compressImageToBase64(file)
+      await updateProfilePhoto(firebaseUser.uid, base64)
+      queryClient.invalidateQueries({ queryKey: ['profile-image', firebaseUser.uid] })
+      setPreviewSrc(null)
+      toast({ title: 'Foto atualizada!' })
+    } catch (err) {
+      setPreviewSrc(null)
+      toast({ variant: 'destructive', title: 'Erro ao salvar foto', description: String(err) })
+    } finally {
+      setUploadingPhoto(false)
+      URL.revokeObjectURL(objectUrl)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const selectedCityObjects = cities.filter(city => selectedCities.includes(city.id))
 
   return (
@@ -159,12 +192,32 @@ function ProfileContent() {
         <Card className="rise-in">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={firebaseUser.photoURL ?? undefined} />
-                <AvatarFallback className="text-xl">
-                  {getInitials(firebaseUser.displayName || 'U')}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={avatarSrc} alt={appUser.displayName} />
+                  <AvatarFallback className="text-xl">
+                    {getInitials(appUser.displayName || 'U')}
+                  </AvatarFallback>
+                </Avatar>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                  aria-label="Alterar foto"
+                >
+                  {uploadingPhoto
+                    ? <Loader2 className="size-5 text-white animate-spin" />
+                    : <Camera className="size-5 text-white" />}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-[var(--sea-ink)]">
                   {appUser.displayName}

@@ -1,4 +1,4 @@
-import type { Timestamp } from 'firebase/firestore'
+import type { FieldValue, Timestamp } from 'firebase/firestore'
 
 export interface City {
   id: string
@@ -105,3 +105,8 @@ export interface Match {
 }
 
 export type MatchResult = 'teamA' | 'teamB' | null
+
+export interface ImageDoc {
+  base64: string
+  updatedAt: Timestamp | FieldValue
+}

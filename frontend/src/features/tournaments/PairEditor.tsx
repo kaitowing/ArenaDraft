@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Users, AlertTriangle } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { UserAvatar } from '#/components/UserAvatar'
 import type { AppUser, PairPolicy } from '#/types'
 import { snakeDraft, type Pair } from './algorithms'
 import { validatePairForPolicy } from '#/lib/utils'
@@ -12,10 +12,6 @@ interface PairEditorProps {
   onConfirm: (pairs: Pair[]) => void
   loading?: boolean
   pairPolicy?: PairPolicy
-}
-
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
 export function PairEditor({ players, onConfirm, loading, pairPolicy = 'any' }: PairEditorProps) {
@@ -89,12 +85,7 @@ export function PairEditor({ players, onConfirm, loading, pairPolicy = 'any' }: 
                             : 'border-transparent bg-[var(--surface-alt,#f4f4f5)] hover:border-[var(--line)]'
                         }`}
                       >
-                        <Avatar className="h-7 w-7 flex-shrink-0">
-                          <AvatarImage src={player.photoURL ?? undefined} />
-                          <AvatarFallback className="text-[10px]">
-                            {getInitials(player.displayName)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar uid={player.uid} displayName={player.displayName} size="xs" className="flex-shrink-0" />
                         <div className="min-w-0 text-left">
                           <p className="text-sm font-medium text-[var(--sea-ink)] truncate">
                             {player.displayName}

@@ -2,9 +2,9 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Trophy, Mars, Venus, Medal } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { usePlayerProfile, useMedals } from '#/features/ranking/rankingQueries'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { Skeleton } from '#/components/ui/skeleton'
+import { UserAvatar } from '#/components/UserAvatar'
 import type { Gender } from '#/types'
 
 function medalLabel(id: string) {
@@ -27,15 +27,6 @@ function PlayerProfilePage() {
       <PlayerProfileContent />
     </AuthGuard>
   )
-}
-
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
 }
 
 function genderLabel(gender: Gender) {
@@ -115,12 +106,7 @@ function PlayerProfileContent() {
         <Card className="rise-in">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={player.photoURL ?? undefined} />
-                <AvatarFallback className="text-xl">
-                  {getInitials(player.displayName)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar uid={player.uid} displayName={player.displayName} size="xl" />
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-[var(--sea-ink)]">
                   {player.displayName}
