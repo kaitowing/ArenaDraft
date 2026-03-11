@@ -35,6 +35,7 @@ export async function signUpWithEmail(
     mmr: 1200,
     cities,
     gender,
+    role: 'USER',
     stats: {
       tournamentsPlayed: 0,
       matchesWon: 0,

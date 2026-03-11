@@ -1,5 +1,5 @@
 import { Link, Outlet, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { Home, Trophy, User, LogOut, Circle } from 'lucide-react'
+import { Home, Trophy, User, LogOut, Circle, Shield } from 'lucide-react'
 import { Toaster } from '#/components/ui/toaster'
 import { useAuth } from '#/features/auth/useAuth'
 import { signOut } from '#/features/auth/authService'
@@ -12,16 +12,19 @@ export const Route = createRootRoute({
 })
 
 function BottomNav() {
-  const { user } = useAuth()
+  const { user, appUser } = useAuth()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
 
   if (!user) return null
 
+  const isAdmin = appUser?.role === 'ADMIN'
+
   const links = [
     { to: '/' as const, icon: Home, label: 'Ranking', exact: true },
     { to: '/tournaments' as const, icon: Trophy, label: 'Torneios', exact: false },
     { to: '/profile' as const, icon: User, label: user.displayName?.split(' ')[0] || 'Perfil', exact: true },
+    ...(isAdmin ? [{ to: '/admin' as const, icon: Shield, label: 'Admin', exact: false }] : []),
   ]
 
   return (

@@ -13,6 +13,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TournamentsIndexRouteImport } from './routes/tournaments/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TournamentsNewRouteImport } from './routes/tournaments/new'
 import { Route as TournamentsTournamentIdRouteImport } from './routes/tournaments/$tournamentId'
 import { Route as PlayersUserIdRouteImport } from './routes/players/$userId'
@@ -37,6 +38,11 @@ const IndexRoute = IndexRouteImport.update({
 const TournamentsIndexRoute = TournamentsIndexRouteImport.update({
   id: '/tournaments/',
   path: '/tournaments/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TournamentsNewRoute = TournamentsNewRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRouteWithChildren
   '/tournaments/new': typeof TournamentsNewRoute
+  '/admin/': typeof AdminIndexRoute
   '/tournaments/': typeof TournamentsIndexRoute
   '/tournaments/$tournamentId/': typeof TournamentsTournamentIdIndexRoute
   '/tournaments/$tournamentId/match/$matchId': typeof TournamentsTournamentIdMatchMatchIdRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/new': typeof TournamentsNewRoute
+  '/admin': typeof AdminIndexRoute
   '/tournaments': typeof TournamentsIndexRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdIndexRoute
   '/tournaments/$tournamentId/match/$matchId': typeof TournamentsTournamentIdMatchMatchIdRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/players/$userId': typeof PlayersUserIdRoute
   '/tournaments/$tournamentId': typeof TournamentsTournamentIdRouteWithChildren
   '/tournaments/new': typeof TournamentsNewRoute
+  '/admin/': typeof AdminIndexRoute
   '/tournaments/': typeof TournamentsIndexRoute
   '/tournaments/$tournamentId/': typeof TournamentsTournamentIdIndexRoute
   '/tournaments/$tournamentId/match/$matchId': typeof TournamentsTournamentIdMatchMatchIdRoute
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/players/$userId'
     | '/tournaments/$tournamentId'
     | '/tournaments/new'
+    | '/admin/'
     | '/tournaments/'
     | '/tournaments/$tournamentId/'
     | '/tournaments/$tournamentId/match/$matchId'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/players/$userId'
     | '/tournaments/new'
+    | '/admin'
     | '/tournaments'
     | '/tournaments/$tournamentId'
     | '/tournaments/$tournamentId/match/$matchId'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/players/$userId'
     | '/tournaments/$tournamentId'
     | '/tournaments/new'
+    | '/admin/'
     | '/tournaments/'
     | '/tournaments/$tournamentId/'
     | '/tournaments/$tournamentId/match/$matchId'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   PlayersUserIdRoute: typeof PlayersUserIdRoute
   TournamentsTournamentIdRoute: typeof TournamentsTournamentIdRouteWithChildren
   TournamentsNewRoute: typeof TournamentsNewRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   TournamentsIndexRoute: typeof TournamentsIndexRoute
 }
 
@@ -173,6 +186,13 @@ declare module '@tanstack/react-router' {
       path: '/tournaments'
       fullPath: '/tournaments/'
       preLoaderRoute: typeof TournamentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tournaments/new': {
@@ -237,6 +257,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlayersUserIdRoute: PlayersUserIdRoute,
   TournamentsTournamentIdRoute: TournamentsTournamentIdRouteWithChildren,
   TournamentsNewRoute: TournamentsNewRoute,
+  AdminIndexRoute: AdminIndexRoute,
   TournamentsIndexRoute: TournamentsIndexRoute,
 }
 export const routeTree = rootRouteImport

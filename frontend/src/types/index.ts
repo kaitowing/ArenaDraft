@@ -10,6 +10,8 @@ export interface City {
 
 export type Gender = 'male' | 'female'
 
+export type UserRole = 'USER' | 'ADMIN'
+
 export type MedalId = 'owner_of_the_court'
 
 export interface MedalAward {
@@ -27,6 +29,7 @@ export interface AppUser {
   mmr: number
   cities: string[]
   gender: Gender | null
+  role: UserRole
   stats: {
     tournamentsPlayed: number
     matchesWon: number

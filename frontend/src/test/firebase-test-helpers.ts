@@ -69,6 +69,7 @@ export function makeTestUser(overrides: Partial<AppUser> = {}): AppUser {
     mmr: 1000 + userCounter * 50,
     cities: [],
     gender: userCounter % 2 === 0 ? 'female' : 'male',
+    role: 'USER',
     stats: { tournamentsPlayed: 0, matchesWon: 0, matchesLost: 0 },
     createdAt: { toDate: () => new Date(), toMillis: () => Date.now() } as unknown as Timestamp,
     ...overrides,

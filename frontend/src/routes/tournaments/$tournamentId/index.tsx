@@ -510,10 +510,9 @@ function LobbyView({
 
 function TournamentContent() {
   const { tournamentId } = Route.useParams()
-  const { user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const { data: tournament, isLoading: tLoading, error: tError } = useTournamentRealtime(tournamentId)
-  const isParticipant = Boolean(user && tournament?.participants?.includes(user.uid))
-  const canLoadMatches = Boolean(tournament && tournament.status !== 'waiting' && isParticipant)
+  const canLoadMatches = Boolean(tournament && tournament.status !== 'waiting')
   const { data: matches = [], isLoading: mLoading, error: mError } = useMatchesRealtime(tournamentId, {
     enabled: canLoadMatches,
   })
@@ -530,12 +529,6 @@ function TournamentContent() {
   const finishedMatches = matches.filter((m) => m.status === 'finished').length
   const isOrganizer = user && tournament?.createdBy === user.uid
   const canForceComplete = tournament?.status === 'in_progress' && isOrganizer
-  const showRestrictedNotice = Boolean(
-    tournament &&
-      tournament.status !== 'waiting' &&
-      !canLoadMatches &&
-      !authLoading,
-  )
 
   const medalWinners = tournamentMedals
     .map((medal) => ({ medal, player: players.find((p) => p.uid === medal.uid) }))
@@ -650,12 +643,7 @@ function TournamentContent() {
         </div>
       ) : (
         <div className="space-y-4">
-          {showRestrictedNotice ? (
-            <div className="surf-card texture-noise rounded-3xl px-5 py-6 text-center text-sm text-[var(--text-muted)]">
-              Partidas e classificação ficam visíveis somente para jogadores participantes após o
-              início do torneio.
-            </div>
-          ) : tournament.format === 'classic' ? (
+          {tournament.format === 'classic' ? (
             <Tabs defaultValue="groups" className="w-full">
               <TabsList className="w-full mb-4">
                 <TabsTrigger value="groups" className="flex-1 gap-1">
