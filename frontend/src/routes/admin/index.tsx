@@ -13,23 +13,26 @@ import {
   RotateCcw,
   Search,
   Shield,
+  UserCog,
   Users,
 } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
+import { useAdminTournamentsInfiniteQuery } from '#/features/admin/queries'
+import {
+  useAdminCancelTournamentMutation,
+  useAdminReopenTournamentMutation,
+} from '#/features/admin/mutations'
 import { useAuth } from '#/features/auth/useAuth'
 import {
-  adminCancelTournament,
-  fetchAdminTournaments,
   migrateUserRoles,
-  reopenTournament,
+  setUserRole,
   type AdminTournamentFilters,
-  type AdminTournamentsPage,
 } from '#/features/admin/adminService'
+import { useAllPlayers } from '#/features/tournaments/tournamentQueries'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { useToast } from '#/hooks/useToast'
-import type { Tournament } from '#/types'
-import type { DocumentSnapshot } from 'firebase/firestore'
+import type { AppUser, Tournament } from '#/types'
 
 export const Route = createFileRoute('/admin/')({ component: AdminPage })
 
@@ -102,11 +105,10 @@ const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
 function AdminContent() {
   const { toast } = useToast()
 
-  const [activeSection, setActiveSection] = useState<'tournaments' | 'migration'>('tournaments')
+  const [activeSection, setActiveSection] = useState<'tournaments' | 'migration' | 'organizers'>('tournaments')
 
   return (
     <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
-      {/* Header */}
       <div className="mb-6 rise-in">
         <p className="sport-label text-xs text-[var(--text-muted)]">Painel de controle</p>
         <div className="flex items-center gap-2">
@@ -118,7 +120,6 @@ function AdminContent() {
         </p>
       </div>
 
-      {/* Section Tabs */}
       <div className="mb-6 flex gap-2 rise-in" style={{ animationDelay: '40ms' }}>
         <button
           type="button"
@@ -131,6 +132,18 @@ function AdminContent() {
         >
           <Filter className="size-4" />
           Torneios
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSection('organizers')}
+          className={`flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+            activeSection === 'organizers'
+              ? 'bg-[var(--cta-primary)] text-white'
+              : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
+          }`}
+        >
+          <UserCog className="size-4" />
+          Organizadores
         </button>
         <button
           type="button"
@@ -147,6 +160,7 @@ function AdminContent() {
       </div>
 
       {activeSection === 'tournaments' && <TournamentsSection toast={toast} />}
+      {activeSection === 'organizers' && <OrganizersSection toast={toast} />}
       {activeSection === 'migration' && <MigrationSection toast={toast} />}
     </main>
   )
@@ -159,90 +173,63 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
   const [idInput, setIdInput] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-
-  const [tournaments, setTournaments] = useState<Tournament[]>([])
-  const [loading, setLoading] = useState(false)
-  const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
-  const [hasMore, setHasMore] = useState(false)
-  const [searched, setSearched] = useState(false)
-
-  const [reopeningId, setReopeningId] = useState<string | null>(null)
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [submittedFilters, setSubmittedFilters] = useState<AdminTournamentFilters | null>(null)
+  const [searchVersion, setSearchVersion] = useState(0)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
+  const adminTournamentsQuery = useAdminTournamentsInfiniteQuery({
+    filters: submittedFilters,
+    searchVersion,
+    toast,
+  })
+
+  const tournaments = adminTournamentsQuery.data?.pages.flatMap((page) => page.tournaments) ?? []
+  const loading = adminTournamentsQuery.isFetching && tournaments.length === 0
+  const hasMore = adminTournamentsQuery.hasNextPage
+  const searched = submittedFilters !== null
+
+  const cancelTournamentMutation = useAdminCancelTournamentMutation({
+    filters: submittedFilters,
+    searchVersion,
+    toast,
+  })
+
+  const reopenTournamentMutation = useAdminReopenTournamentMutation({
+    filters: submittedFilters,
+    searchVersion,
+    toast,
+  })
+
   async function handleSearch(append = false) {
-    setLoading(true)
-    if (!append) {
-      setTournaments([])
-      setLastDoc(null)
-      setHasMore(false)
+    if (append) {
+      if (!adminTournamentsQuery.hasNextPage) return
+      await adminTournamentsQuery.fetchNextPage()
+      return
     }
-    try {
-      const activeFilters: AdminTournamentFilters = {
-        ...filters,
-        tournamentId: idInput.trim() || undefined,
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
-      }
-      const page: AdminTournamentsPage = await fetchAdminTournaments(
-        activeFilters,
-        append ? lastDoc : null,
-      )
-      setTournaments((prev) => (append ? [...prev, ...page.tournaments] : page.tournaments))
-      setLastDoc(page.lastDoc)
-      setHasMore(page.hasMore)
-      setSearched(true)
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Erro ao buscar torneios', description: String(err) })
-    } finally {
-      setLoading(false)
-    }
+
+    setExpandedId(null)
+    setSubmittedFilters({
+      ...filters,
+      tournamentId: idInput.trim() || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+    })
+    setSearchVersion((current) => current + 1)
   }
 
   async function handleCancel(tournament: Tournament) {
-    setCancellingId(tournament.id)
-    try {
-      await adminCancelTournament(tournament.id)
-      toast({
-        title: 'Torneio cancelado',
-        description: `"${tournament.name}" foi cancelado e as métricas dos jogadores foram revertidas.`,
-      })
-      setTournaments((prev) =>
-        prev.map((t) => (t.id === tournament.id ? { ...t, status: 'cancelled' } : t)),
-      )
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Erro ao cancelar torneio', description: String(err) })
-    } finally {
-      setCancellingId(null)
-    }
+    await cancelTournamentMutation.mutateAsync(tournament)
   }
 
   async function handleReopen(tournament: Tournament) {
-    setReopeningId(tournament.id)
-    try {
-      await reopenTournament(tournament.id)
-      toast({
-        title: 'Torneio reaberto',
-        description: `"${tournament.name}" voltou para Em andamento.`,
-      })
-      // Update the tournament status locally
-      setTournaments((prev) =>
-        prev.map((t) => (t.id === tournament.id ? { ...t, status: 'in_progress' } : t)),
-      )
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Erro ao reabrir torneio', description: String(err) })
-    } finally {
-      setReopeningId(null)
-    }
+    await reopenTournamentMutation.mutateAsync(tournament)
   }
 
   return (
     <div className="space-y-4 rise-in" style={{ animationDelay: '80ms' }}>
-      {/* Filters Card */}
       <div className="rounded-3xl border border-[var(--wave-line)] bg-[color-mix(in_oklab,var(--shell)_86%,transparent)] px-4 py-4 shadow-sm backdrop-blur space-y-4">
         <p className="sport-label text-[11px] text-[var(--text-muted)]">Filtros</p>
 
-        {/* Status filter */}
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             Status
@@ -264,7 +251,6 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
           </div>
         </div>
 
-        {/* Tournament ID */}
         <div>
           <label className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
             <Hash className="size-3" />
@@ -278,7 +264,6 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
           />
         </div>
 
-        {/* Date range */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -308,7 +293,7 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
 
         <Button
           className="w-full gap-2 rounded-2xl bg-[var(--cta-primary)] hover:bg-[var(--cta-primary-dark)]"
-          onClick={() => handleSearch(false)}
+          onClick={() => void handleSearch(false)}
           disabled={loading}
         >
           {loading && !tournaments.length ? (
@@ -320,7 +305,6 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
         </Button>
       </div>
 
-      {/* Results */}
       {searched && (
         <div className="space-y-3">
           {tournaments.length === 0 && !loading ? (
@@ -341,20 +325,20 @@ function TournamentsSection({ toast }: { toast: ReturnType<typeof useToast>['toa
                   onToggleExpand={() =>
                     setExpandedId((prev) => (prev === t.id ? null : t.id))
                   }
-                  onReopen={() => handleReopen(t)}
-                  reopening={reopeningId === t.id}
-                  onCancel={() => handleCancel(t)}
-                  cancelling={cancellingId === t.id}
+                  onReopen={() => void handleReopen(t)}
+                  reopening={reopenTournamentMutation.isPending && reopenTournamentMutation.variables?.id === t.id}
+                  onCancel={() => void handleCancel(t)}
+                  cancelling={cancelTournamentMutation.isPending && cancelTournamentMutation.variables?.id === t.id}
                 />
               ))}
               {hasMore && (
                 <Button
                   variant="outline"
                   className="w-full rounded-2xl"
-                  onClick={() => handleSearch(true)}
-                  disabled={loading}
+                  onClick={() => void handleSearch(true)}
+                  disabled={adminTournamentsQuery.isFetchingNextPage}
                 >
-                  {loading ? (
+                  {adminTournamentsQuery.isFetchingNextPage ? (
                     <Loader2 className="size-4 animate-spin mr-2" />
                   ) : (
                     <RefreshCw className="size-4 mr-2" />
@@ -566,6 +550,129 @@ function Detail({ label, value, mono }: { label: string; value: string; mono?: b
       >
         {value}
       </p>
+    </div>
+  )
+}
+
+// ─── Organizers Section ───────────────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+  USER: 'Usuário',
+  ORGANIZER: 'Organizador',
+  ADMIN: 'Admin',
+}
+
+function OrganizersSection({ toast }: { toast: ReturnType<typeof useToast>['toast'] }) {
+  const [search, setSearch] = useState('')
+  const [loadingUid, setLoadingUid] = useState<string | null>(null)
+  const { data: players = [], isLoading, refetch } = useAllPlayers()
+
+  const filtered = players.filter((p) => {
+    if (p.role === 'ADMIN') return false
+    const q = search.toLowerCase()
+    return (
+      p.displayName.toLowerCase().includes(q) ||
+      (p.email ?? '').toLowerCase().includes(q)
+    )
+  })
+
+  async function handleToggleRole(player: AppUser) {
+    const newRole = player.role === 'ORGANIZER' ? 'USER' : 'ORGANIZER'
+    setLoadingUid(player.uid)
+    try {
+      await setUserRole(player.uid, newRole)
+      await refetch()
+      toast({
+        title: newRole === 'ORGANIZER'
+          ? `${player.displayName} agora é Organizador`
+          : `${player.displayName} voltou a ser Usuário`,
+      })
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Erro ao alterar role', description: String(err) })
+    } finally {
+      setLoadingUid(null)
+    }
+  }
+
+  return (
+    <div className="space-y-4 rise-in" style={{ animationDelay: '80ms' }}>
+      <div className="rounded-3xl border border-[var(--wave-line)] bg-[color-mix(in_oklab,var(--shell)_86%,transparent)] px-5 py-5 shadow-sm backdrop-blur space-y-4">
+        <div className="flex items-center gap-2">
+          <UserCog className="size-5 text-[var(--cta-primary)]" />
+          <p className="font-semibold text-[var(--text-heading)]">Gerenciar Organizadores</p>
+        </div>
+        <p className="text-sm text-[var(--text-muted)] leading-relaxed">
+          Organizadores podem adicionar jogadores diretamente nos seus torneios, sem que os jogadores precisem usar o código de entrada.
+        </p>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" />
+          <Input
+            placeholder="Buscar por nome ou e-mail..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 text-sm"
+          />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="size-6 animate-spin text-[var(--cta-primary)]" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="surf-card texture-noise flex flex-col items-center gap-3 rounded-3xl px-6 py-10 text-center text-[var(--text-muted)]">
+          <Users className="size-8 text-[var(--cta-primary)]" />
+          <p className="text-sm">
+            {search ? 'Nenhum usuário encontrado com essa busca.' : 'Nenhum usuário cadastrado.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((player) => (
+            <div
+              key={player.uid}
+              className="island-shell rounded-xl px-4 py-3 flex items-center gap-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--sea-ink)]">
+                  {player.displayName}
+                </p>
+                {player.email && (
+                  <p className="truncate text-xs text-[var(--text-muted)]">{player.email}</p>
+                )}
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  player.role === 'ORGANIZER'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {ROLE_LABELS[player.role] ?? player.role}
+              </span>
+              <Button
+                size="sm"
+                variant={player.role === 'ORGANIZER' ? 'outline' : 'default'}
+                className={`shrink-0 rounded-xl text-xs ${
+                  player.role === 'ORGANIZER'
+                    ? 'border-red-300 text-red-700 hover:bg-red-50'
+                    : 'bg-[var(--cta-primary)] hover:bg-[var(--cta-primary-dark)] text-white'
+                }`}
+                disabled={loadingUid === player.uid}
+                onClick={() => void handleToggleRole(player)}
+              >
+                {loadingUid === player.uid ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : player.role === 'ORGANIZER' ? (
+                  'Remover'
+                ) : (
+                  'Promover'
+                )}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

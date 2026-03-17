@@ -95,6 +95,39 @@ export async function joinTournamentByCode(
   return snapshot.docs[0].id
 }
 
+export async function addParticipantByOrganizer(
+  tournamentId: string,
+  organizerUid: string,
+  targetUid: string,
+): Promise<void> {
+  const tournamentRef = doc(db, 'tournaments', tournamentId)
+  const tournamentSnap = await getDoc(tournamentRef)
+  if (!tournamentSnap.exists()) throw new Error('Torneio não encontrado.')
+
+  const tournament = { id: tournamentSnap.id, ...tournamentSnap.data() } as Tournament
+  if (tournament.status !== 'waiting') {
+    throw new Error('Só é possível adicionar participantes em torneios aguardando.')
+  }
+  if (tournament.createdBy !== organizerUid) {
+    throw new Error('Apenas o organizador do torneio pode adicionar participantes diretamente.')
+  }
+
+  const organizerSnap = await getDoc(doc(db, 'users', organizerUid))
+  if (!organizerSnap.exists()) throw new Error('Organizador não encontrado.')
+  const organizer = organizerSnap.data() as AppUser
+  if (organizer.role !== 'ORGANIZER' && organizer.role !== 'ADMIN') {
+    throw new Error('Permissão negada. Apenas organizadores ou admins podem usar esta função.')
+  }
+
+  if (tournament.participants.includes(targetUid)) {
+    throw new Error('Este jogador já está no torneio.')
+  }
+
+  await updateDoc(tournamentRef, {
+    participants: arrayUnion(targetUid),
+  })
+}
+
 export async function startTournament(
   tournamentId: string,
   pairs: [AppUser, AppUser][],

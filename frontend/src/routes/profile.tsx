@@ -1,14 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Camera, Loader2, Save, Trophy, Target, MapPin, Venus, Mars, Sparkles, Medal } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { useAuth } from '#/features/auth/useAuth'
+import { useSaveProfileMutation, useUploadProfilePhotoMutation } from '#/features/auth/mutations'
 import { useCities, useAppUserRealtime } from '#/features/tournaments/tournamentQueries'
 import { useMedals } from '#/features/ranking/rankingQueries'
-import { updateUserProfile, updateProfilePhoto } from '#/features/auth/authService'
 import { useProfileImage } from '#/features/auth/imageQueries'
-import { compressImageToBase64 } from '#/lib/imageUtils'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
@@ -60,7 +58,6 @@ function medalDescription(id: string) {
 function ProfileContent() {
   const { user: firebaseUser } = useAuth()
   const { toast } = useToast()
-  const queryClient = useQueryClient()
   const { data: cities = [] } = useCities()
 
   const { data: appUser, isLoading } = useAppUserRealtime(firebaseUser?.uid)
@@ -68,12 +65,22 @@ function ProfileContent() {
   const { data: savedPhoto } = useProfileImage(firebaseUser?.uid)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [saving, setSaving] = useState(false)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState(appUser?.displayName || firebaseUser?.displayName || '')
   const [selectedCities, setSelectedCities] = useState<string[]>(appUser?.cities || [])
   const [gender, setGender] = useState<Gender | null>(appUser?.gender ?? null)
+
+  const saveProfileMutation = useSaveProfileMutation({
+    uid: firebaseUser?.uid,
+    toast,
+  })
+
+  const uploadPhotoMutation = useUploadProfilePhotoMutation({
+    uid: firebaseUser?.uid,
+    toast,
+    onSuccess: () => setPreviewSrc(null),
+    onError: () => setPreviewSrc(null),
+  })
 
   useEffect(() => {
     if (appUser) {
@@ -126,17 +133,7 @@ function ProfileContent() {
       return
     }
 
-    setSaving(true)
-    try {
-      await updateUserProfile(firebaseUser.uid, { displayName: name, cities: selectedCities, gender })
-      toast({ title: 'Perfil atualizado!' })
-      // Force page reload to get updated user data
-      window.location.reload()
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Erro ao salvar', description: String(err) })
-    } finally {
-      setSaving(false)
-    }
+    await saveProfileMutation.mutateAsync({ displayName: name, cities: selectedCities, gender })
   }
 
   const avatarSrc = previewSrc ?? savedPhoto ?? undefined
@@ -155,18 +152,9 @@ function ProfileContent() {
     const objectUrl = URL.createObjectURL(file)
     setPreviewSrc(objectUrl)
 
-    setUploadingPhoto(true)
     try {
-      const base64 = await compressImageToBase64(file)
-      await updateProfilePhoto(firebaseUser.uid, base64)
-      queryClient.invalidateQueries({ queryKey: ['profile-image', firebaseUser.uid] })
-      setPreviewSrc(null)
-      toast({ title: 'Foto atualizada!' })
-    } catch (err) {
-      setPreviewSrc(null)
-      toast({ variant: 'destructive', title: 'Erro ao salvar foto', description: String(err) })
+      await uploadPhotoMutation.mutateAsync(file)
     } finally {
-      setUploadingPhoto(false)
       URL.revokeObjectURL(objectUrl)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -202,11 +190,11 @@ function ProfileContent() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
+                  disabled={uploadPhotoMutation.isPending}
                   className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
                   aria-label="Alterar foto"
                 >
-                  {uploadingPhoto
+                  {uploadPhotoMutation.isPending
                     ? <Loader2 className="size-5 text-white animate-spin" />
                     : <Camera className="size-5 text-white" />}
                 </button>
@@ -281,17 +269,17 @@ function ProfileContent() {
             ) : (
               <div className="space-y-2">
                 {medals.map((medal, index) => (
-                    <div
-                      key={`${medal.id}-${medal.tournamentId}-${index}`}
-                      className="island-shell rounded-2xl px-3 py-2.5"
-                    >
-                      <p className="text-sm font-semibold text-[var(--sea-ink)]"> 🥇 {medalLabel(medal.id)}</p>
-                      <p className="text-xs text-[var(--sea-ink-soft)]">{medalDescription(medal.id)}</p>
-                      <p className="mt-1 text-[11px] text-[var(--text-muted)]">
-                        Conquistada em {medal.awardedAt.toDate().toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  ))}
+                  <div
+                    key={`${medal.id}-${medal.tournamentId}-${index}`}
+                    className="island-shell rounded-2xl px-3 py-2.5"
+                  >
+                    <p className="text-sm font-semibold text-[var(--sea-ink)]"> 🥇 {medalLabel(medal.id)}</p>
+                    <p className="text-xs text-[var(--sea-ink-soft)]">{medalDescription(medal.id)}</p>
+                    <p className="mt-1 text-[11px] text-[var(--text-muted)]">
+                      Conquistada em {medal.awardedAt.toDate().toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
@@ -380,10 +368,10 @@ function ProfileContent() {
 
             <Button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saveProfileMutation.isPending}
               className="w-full"
             >
-              {saving ? 'Salvando...' : (
+              {saveProfileMutation.isPending ? 'Salvando...' : (
                 <>
                   <Save className="size-4 mr-2" />
                   Salvar alterações

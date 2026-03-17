@@ -1,14 +1,16 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal, Dices } from 'lucide-react'
+import { ChevronLeft, Check, Copy, Swords, Trophy, Layers, Grid3x3, Medal, Dices, Search, UserPlus, X } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
-import { useTournamentRealtime, useTournamentPlayers } from '#/features/tournaments/tournamentQueries'
+import { useTournamentRealtime, useTournamentPlayers, useAllPlayers } from '#/features/tournaments/tournamentQueries'
 import { forceCompleteTournament, cancelTournament, startTournament } from '#/features/tournaments/tournamentService'
+import { useAddParticipantByOrganizerMutation } from '#/features/tournaments/mutations'
 import { useMatchesRealtime } from '#/features/matches/matchQueries'
 import { PairEditor } from '#/features/tournaments/PairEditor'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
+import { Input } from '#/components/ui/input'
 import { UserAvatar } from '#/components/UserAvatar'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '#/components/ui/dialog'
@@ -287,6 +289,110 @@ function BracketTab({ matches, players }: { matches: Match[]; players: AppUser[]
   )
 }
 
+function AddParticipantSearch({
+  tournament,
+  organizerUid,
+}: {
+  tournament: Tournament
+  organizerUid: string
+}) {
+  const { toast } = useToast()
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const { data: allPlayers = [] } = useAllPlayers()
+
+  const addMutation = useAddParticipantByOrganizerMutation({
+    tournamentId: tournament.id,
+    organizerUid,
+    toast,
+    onSuccess: () => {
+      setSearch('')
+      setOpen(false)
+    },
+  })
+
+  const suggestions = allPlayers.filter((p) => {
+    if (tournament.participants.includes(p.uid)) return false
+    const q = search.toLowerCase()
+    return (
+      p.displayName.toLowerCase().includes(q) ||
+      (p.email ?? '').toLowerCase().includes(q)
+    )
+  })
+
+  return (
+    <div className="space-y-2">
+      <p className="island-kicker text-xs">Adicionar jogador</p>
+      {open ? (
+        <div className="surf-card texture-noise rounded-2xl p-3 space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" />
+            <Input
+              autoFocus
+              placeholder="Buscar por nome ou e-mail..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 text-sm"
+            />
+          </div>
+          {search.length > 0 && (
+            <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+              {suggestions.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-[var(--text-muted)]">
+                  Nenhum jogador encontrado.
+                </p>
+              ) : (
+                suggestions.slice(0, 8).map((player) => (
+                  <button
+                    key={player.uid}
+                    type="button"
+                    disabled={addMutation.isPending}
+                    onClick={() => addMutation.mutate(player.uid)}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-[color-mix(in_oklab,var(--shell)_80%,transparent)] disabled:opacity-50 cursor-pointer"
+                  >
+                    <UserAvatar uid={player.uid} displayName={player.displayName} size="xs" className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--text-heading)]">
+                        {player.displayName}
+                      </p>
+                      {player.email && (
+                        <p className="truncate text-xs text-[var(--text-muted)]">{player.email}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-xs text-[var(--text-muted)]">{player.mmr} MMR</span>
+                    <UserPlus className="shrink-0 size-4 text-[var(--cta-primary)]" />
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5 rounded-xl"
+            onClick={() => { setOpen(false); setSearch('') }}
+          >
+            <X className="size-3.5" />
+            Cancelar
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 rounded-xl border-[var(--cta-primary)] text-[var(--cta-primary)] hover:bg-[var(--cta-primary)]/10"
+          onClick={() => setOpen(true)}
+        >
+          <UserPlus className="size-3.5" />
+          Adicionar jogador
+        </Button>
+      )}
+    </div>
+  )
+}
+
 function LobbyView({
   tournament,
   players,
@@ -294,7 +400,7 @@ function LobbyView({
   tournament: Tournament
   players: AppUser[]
 }) {
-  const { user } = useAuth()
+  const { user, appUser } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [copied, setCopied] = useState(false)
@@ -303,6 +409,7 @@ function LobbyView({
   const [showCancelDialog, setShowCancelDialog] = useState(false)
 
   const isOwner = user?.uid === tournament.createdBy
+  const canAddParticipants = isOwner && (appUser?.role === 'ORGANIZER' || appUser?.role === 'ADMIN')
   const canStart = players.length >= 4 && players.length % 2 === 0
   const organizerPlayer = players.find((p) => p.uid === tournament.createdBy)
 
@@ -412,6 +519,10 @@ function LobbyView({
           ))}
         </div>
       </div>
+
+      {canAddParticipants && user && (
+        <AddParticipantSearch tournament={tournament} organizerUid={user.uid} />
+      )}
 
       {isOwner ? (
         <div className="space-y-2">

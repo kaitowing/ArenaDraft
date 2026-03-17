@@ -10,7 +10,7 @@ export interface City {
 
 export type Gender = 'male' | 'female'
 
-export type UserRole = 'USER' | 'ADMIN'
+export type UserRole = 'USER' | 'ORGANIZER' | 'ADMIN'
 
 export type MedalId = 'owner_of_the_court'
 

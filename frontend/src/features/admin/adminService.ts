@@ -9,13 +9,14 @@ import {
   query,
   runTransaction,
   startAfter,
+  updateDoc,
   where,
   writeBatch,
   type DocumentSnapshot,
   type QueryConstraint,
 } from 'firebase/firestore'
 import { db } from '#/lib/firebase'
-import type { AppUser, Match, Tournament } from '#/types'
+import type { AppUser, Match, Tournament, UserRole } from '#/types'
 
 // ─── Reopen Tournament ────────────────────────────────────────────────────────
 
@@ -192,6 +193,21 @@ export async function fetchAdminTournaments(
     lastDoc,
     hasMore: snapshot.docs.length === PAGE_SIZE,
   }
+}
+
+// ─── Set User Role ────────────────────────────────────────────────────────────
+
+/**
+ * Updates the `role` field of a user document.
+ * Only callable by ADMIN users (enforced client-side via AdminGuard).
+ * Cannot be used to set/remove the ADMIN role — that must be done via Firebase Console.
+ */
+export async function setUserRole(targetUid: string, role: UserRole): Promise<void> {
+  if (role === 'ADMIN') {
+    throw new Error('Não é permitido promover usuários a ADMIN por aqui. Use o Firebase Console.')
+  }
+  const ref = doc(db, 'users', targetUid)
+  await updateDoc(ref, { role })
 }
 
 // ─── Migrate User Roles ───────────────────────────────────────────────────────

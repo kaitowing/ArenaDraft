@@ -3,23 +3,22 @@ import { useState } from 'react'
 import { Loader2, LogIn, Plus, Trophy, RefreshCw } from 'lucide-react'
 import { AuthGuard } from '#/features/auth/AuthGuard'
 import { TournamentCard } from '#/features/tournaments/TournamentCard'
+import { useJoinTournamentMutation } from '#/features/tournaments/mutations'
 import { useTournamentsRealtime, type TournamentDateFilter } from '#/features/tournaments/tournamentQueries'
-import { joinTournamentByCode } from '#/features/tournaments/tournamentService'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import { useToast } from '#/hooks/useToast'
 import { useAuth } from '#/features/auth/useAuth'
-import { useQueryClient } from '@tanstack/react-query'
 
- const PAGE_SIZE = 10
+const PAGE_SIZE = 10
 
- const DATE_FILTER_OPTIONS: Array<{ value: TournamentDateFilter; label: string }> = [
-   { value: 'last30days', label: 'Últimos 30 dias' },
-   { value: 'thisMonth', label: 'Este mês' },
-   { value: 'thisYear', label: 'Este ano' },
-   { value: 'all', label: 'Todo o histórico' },
- ]
+const DATE_FILTER_OPTIONS: Array<{ value: TournamentDateFilter; label: string }> = [
+  { value: 'last30days', label: 'Últimos 30 dias' },
+  { value: 'thisMonth', label: 'Este mês' },
+  { value: 'thisYear', label: 'Este ano' },
+  { value: 'all', label: 'Todo o histórico' },
+]
 
 export const Route = createFileRoute('/tournaments/')({ component: TournamentsPage })
 
@@ -35,15 +34,22 @@ function TournamentsContent() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const { user } = useAuth()
-  const queryClient = useQueryClient()
   const [code, setCode] = useState('')
-  const [joining, setJoining] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
   const [dateFilter, setDateFilter] = useState<TournamentDateFilter>('last30days')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const { data, isLoading } = useTournamentsRealtime({ dateFilter, visibleCount })
+  const { data, isLoading, isRefetching, refetch } = useTournamentsRealtime({ dateFilter, visibleCount })
   const tournaments = data?.tournaments ?? []
   const hasMore = data?.hasMore ?? false
+
+  const joinTournamentMutation = useJoinTournamentMutation({
+    code,
+    userId: user?.uid,
+    toast,
+    onSuccess: (tournamentId) => {
+      setCode('')
+      void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })
+    },
+  })
 
   function handleDateFilterChange(nextFilter: TournamentDateFilter) {
     setDateFilter(nextFilter)
@@ -53,35 +59,15 @@ function TournamentsContent() {
   async function handleJoin(e: React.FormEvent) {
     e.preventDefault()
     if (!user) return
-    setJoining(true)
-    try {
-      const tournamentId = await joinTournamentByCode(code, user.uid)
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tournaments'] }),
-        queryClient.invalidateQueries({ queryKey: ['tournament', tournamentId] }),
-        queryClient.invalidateQueries({ queryKey: ['matches', tournamentId] }),
-        queryClient.invalidateQueries({ queryKey: ['tournament-players'] }),
-      ])
-
-      void navigate({ to: '/tournaments/$tournamentId', params: { tournamentId } })
-    } catch (err) {
-      toast({ variant: 'destructive', title: 'Código inválido', description: String(err) })
-    } finally {
-      setJoining(false)
-      setCode('')
-    }
+    await joinTournamentMutation.mutateAsync()
   }
 
   async function handleRefresh() {
-    setRefreshing(true)
     try {
-      await queryClient.invalidateQueries({ queryKey: ['tournaments-realtime'] })
+      await refetch()
       toast({ title: 'Lista atualizada!' })
     } catch (err) {
       toast({ variant: 'destructive', title: 'Erro ao atualizar', description: String(err) })
-    } finally {
-      setRefreshing(false)
     }
   }
 
@@ -100,8 +86,8 @@ function TournamentsContent() {
               maxLength={6}
               className="font-mono tracking-[0.5em] uppercase text-lg"
             />
-            <Button type="submit" disabled={joining || code.length < 6} className="shrink-0 gap-1.5">
-              {joining ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
+            <Button type="submit" disabled={joinTournamentMutation.isPending || code.length < 6} className="shrink-0 gap-1.5">
+              {joinTournamentMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
               Entrar
             </Button>
           </div>
@@ -124,11 +110,11 @@ function TournamentsContent() {
               variant="outline"
               size="icon"
               onClick={handleRefresh}
-              disabled={refreshing}
+              disabled={isRefetching}
               className="rounded-2xl"
               title="Atualizar lista"
             >
-              <RefreshCw className={`size-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`size-4 ${isRefetching ? 'animate-spin' : ''}`} />
             </Button>
             <Link to="/tournaments/new">
               <Button className="gap-1.5 rounded-2xl bg-[var(--cta-primary)] px-6 text-base hover:bg-[var(--cta-primary-dark)]">
