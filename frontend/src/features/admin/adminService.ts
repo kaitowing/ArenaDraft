@@ -51,10 +51,11 @@ export async function reopenTournament(tournamentId: string): Promise<void> {
 // ─── Cancel Tournament (Admin) ───────────────────────────────────────────────
 
 /**
- * Cancels an in-progress tournament without impacting player metrics.
- * - Reverts mmr, matchesWon and matchesLost for every finished match that
- *   has mmrDeltas stored (matches scored after this feature was deployed).
- * - Deletes all match documents for the tournament.
+ * Cancels an in-progress or waiting tournament without impacting player metrics.
+ * - For in_progress tournaments: reverts mmr, matchesWon and matchesLost for
+ *   every finished match that has mmrDeltas stored (matches scored after this
+ *   feature was deployed), and deletes all match documents.
+ * - For waiting tournaments: no matches exist, so only the status is updated.
  * - Sets tournament status to `cancelled`.
  * NOTE: requires `allow delete: if isAdmin()` on /matches/{matchId} in
  * Firestore security rules for match deletion to succeed.
@@ -65,8 +66,8 @@ export async function adminCancelTournament(tournamentId: string): Promise<void>
   if (!tournamentSnap.exists()) throw new Error('Torneio não encontrado.')
 
   const tournament = { id: tournamentSnap.id, ...tournamentSnap.data() } as Tournament
-  if (tournament.status !== 'in_progress') {
-    throw new Error(`Torneio não está em andamento (status atual: ${tournament.status}).`)
+  if (tournament.status !== 'in_progress' && tournament.status !== 'waiting') {
+    throw new Error(`Torneio não pode ser cancelado (status atual: ${tournament.status}).`)
   }
 
   const matchesSnap = await getDocs(
