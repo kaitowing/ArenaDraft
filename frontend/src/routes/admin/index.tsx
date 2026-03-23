@@ -431,17 +431,27 @@ function TournamentAdminCard({
           </div>
 
           {/* Actions */}
-          {tournament.status === 'in_progress' && (
+          {(tournament.status === 'in_progress' || tournament.status === 'waiting') && (
             <div className="pt-2">
               {confirmingCancel ? (
                 <div className="rounded-2xl border border-red-300 bg-red-50 p-3 space-y-2">
                   <div className="flex items-start gap-2 text-red-800">
                     <AlertTriangle className="size-4 mt-0.5 shrink-0" />
                     <p className="text-xs leading-snug">
-                      Isso vai <strong>cancelar o torneio</strong>, reverter o MMR e as
-                      estatísticas de vitórias/derrotas de cada jogador cujas partidas já
-                      foram finalizadas, e <strong>deletar todas as partidas</strong>.
-                      Esta ação não pode ser desfeita. Confirma?
+                      {tournament.status === 'in_progress' ? (
+                        <>
+                          Isso vai <strong>cancelar o torneio</strong>, reverter o MMR e as
+                          estatísticas de vitórias/derrotas de cada jogador cujas partidas já
+                          foram finalizadas, e <strong>deletar todas as partidas</strong>.
+                          Esta ação não pode ser desfeita. Confirma?
+                        </>
+                      ) : (
+                        <>
+                          Isso vai <strong>cancelar o torneio</strong> que está aguardando
+                          participantes. Nenhuma métrica será alterada pois o torneio ainda
+                          não começou. Esta ação não pode ser desfeita. Confirma?
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="flex gap-2">
